@@ -5,7 +5,9 @@ const Navbar = () => {
     <nav className="bg-gray-800 p-4 shadow-lg">
       <div className="container mx-auto">
         <div className="flex items-center justify-between">
-          <div className="text-white font-bold text-xl">Triple Click Index</div>
+          <div className="text-white font-bold text-xl">
+            <a href="/">Triple Click Dex</a>
+          </div>
           <div className="flex space-x-6">
             <a
               href="/episodes"
@@ -33,3 +35,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+

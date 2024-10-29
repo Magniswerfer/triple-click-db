@@ -4,24 +4,46 @@
 
 import * as $_404 from "./routes/_404.tsx";
 import * as $_app from "./routes/_app.tsx";
+import * as $admin_index from "./routes/admin/index.tsx";
+import * as $api_episodes from "./routes/api/episodes.ts";
+import * as $api_games_index from "./routes/api/games/index.ts";
+import * as $api_games_search from "./routes/api/games/search.ts";
 import * as $api_joke from "./routes/api/joke.ts";
+import * as $episodes_episode_ from "./routes/episodes/[episode].tsx";
+import * as $episodes_index from "./routes/episodes/index.tsx";
 import * as $games_game_ from "./routes/games/[game].tsx";
+import * as $games_index from "./routes/games/index.tsx";
 import * as $greet_name_ from "./routes/greet/[name].tsx";
 import * as $index from "./routes/index.tsx";
+import * as $one_more_thing from "./routes/one-more-thing.tsx";
 import * as $Counter from "./islands/Counter.tsx";
+import * as $EpisodeFilter from "./islands/EpisodeFilter.tsx";
+import * as $EpisodeManager from "./islands/EpisodeManager.tsx";
+import * as $GameSearchModal from "./islands/GameSearchModal.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
   routes: {
     "./routes/_404.tsx": $_404,
     "./routes/_app.tsx": $_app,
+    "./routes/admin/index.tsx": $admin_index,
+    "./routes/api/episodes.ts": $api_episodes,
+    "./routes/api/games/index.ts": $api_games_index,
+    "./routes/api/games/search.ts": $api_games_search,
     "./routes/api/joke.ts": $api_joke,
+    "./routes/episodes/[episode].tsx": $episodes_episode_,
+    "./routes/episodes/index.tsx": $episodes_index,
     "./routes/games/[game].tsx": $games_game_,
+    "./routes/games/index.tsx": $games_index,
     "./routes/greet/[name].tsx": $greet_name_,
     "./routes/index.tsx": $index,
+    "./routes/one-more-thing.tsx": $one_more_thing,
   },
   islands: {
     "./islands/Counter.tsx": $Counter,
+    "./islands/EpisodeFilter.tsx": $EpisodeFilter,
+    "./islands/EpisodeManager.tsx": $EpisodeManager,
+    "./islands/GameSearchModal.tsx": $GameSearchModal,
   },
   baseUrl: import.meta.url,
 } satisfies Manifest;

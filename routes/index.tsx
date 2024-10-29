@@ -1,119 +1,161 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Head } from "$fresh/runtime.ts";
-import { kv } from "../utils/db.ts";
 import Layout from "../components/Layout.tsx";
+import { EpisodeCard } from "../components/EpisodeCard.tsx";
+import { GameCard, MostDiscussedGameCard } from "../components/GameCard.tsx";
+import { kv } from "../utils/db.ts";
+import { Episode, Game, GameReference } from "../types.ts";
 
-interface Episode {
-  id: string;
-  title: string;
-  description: string;
-  sections: {
-    mainText: string;
-    oneMoreThing: {
-      kirk: string;
-      maddy: string;
-      jason: string;
-    };
-  };
-  date: string;
-  duration: string;
-  audioUrl: string;
-  episodeNumber: number;
-  authors: string;
-  explicit: boolean;
-  type: string;
+interface HomePageData {
+  latestEpisodes: Episode[];
+  latestGames: Game[];
+  mostDiscussedGames: Array<Game & { mentionCount: number }>;
 }
 
-export const handler: Handlers<Episode[]> = {
+export const handler: Handlers<HomePageData> = {
   async GET(_req, ctx) {
-    const entries = await kv.list<Episode>({ prefix: ["episodes"] });
-    const episodes = [];
-    for await (const entry of entries) {
+    // Get all episodes
+    const episodeEntries = await kv.list<Episode>({ prefix: ["episodes"] });
+    const episodes: Episode[] = [];
+    for await (const entry of episodeEntries) {
       episodes.push(entry.value);
     }
-    return ctx.render(episodes.sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    ));
-  },
+    episodes.sort((a, b) => b.episodeNumber - a.episodeNumber);
+    
+    // Get latest episodes
+    const latestEpisodes = episodes.slice(0, 3);
+
+    // Track game mentions for both latest and most discussed
+    const gameMentions = new Map<string, { 
+      game: GameReference; 
+      date: string;
+      count: number;
+    }>();
+
+    // Process all episodes for game mentions
+    for (const episode of episodes) {
+      if (episode.games) {
+        for (const gameRef of episode.games) {
+          const existing = gameMentions.get(gameRef.id);
+          if (existing) {
+            existing.count++;
+            if (new Date(episode.date) > new Date(existing.date)) {
+              existing.date = episode.date;
+            }
+          } else {
+            gameMentions.set(gameRef.id, { 
+              game: gameRef, 
+              date: episode.date,
+              count: 1
+            });
+          }
+        }
+      }
+    }
+
+    // Get latest games (by mention date)
+    const sortedByDate = Array.from(gameMentions.values())
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+
+    // Get most discussed games (by mention count)
+    const sortedByCount = Array.from(gameMentions.values())
+      .sort((a, b) => b.count - a.count || new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 3);
+
+    // Fetch full game details
+    const latestGames: Game[] = [];
+    for (const mention of sortedByDate) {
+      const gameEntry = await kv.get<Game>(["games", mention.game.id]);
+      if (gameEntry.value) {
+        latestGames.push(gameEntry.value);
+      }
+    }
+
+    const mostDiscussedGames: Array<Game & { mentionCount: number }> = [];
+    for (const mention of sortedByCount) {
+      const gameEntry = await kv.get<Game>(["games", mention.game.id]);
+      if (gameEntry.value) {
+        mostDiscussedGames.push({
+          ...gameEntry.value,
+          mentionCount: mention.count
+        });
+      }
+    }
+
+    return ctx.render({ latestEpisodes, latestGames, mostDiscussedGames });
+  }
 };
 
-export default function Home({ data: episodes }: PageProps<Episode[]>) {
-  if (!episodes || episodes.length === 0) {
-    return (
-      <Layout>
-        <p>No episodes found.</p>
-      </Layout>
-    );
-  }
+function Home({ data }: PageProps<HomePageData>) {
+  const { latestEpisodes, latestGames, mostDiscussedGames } = data;
 
   return (
     <Layout>
       <Head>
-        <title>Triple Click Episode Guide</title>
+        <title>Triple Click DB</title>
       </Head>
-      
-      <h1 className="text-3xl font-bold mb-6">Triple Click Episode Guide</h1>
-      
-      <div className="space-y-6">
-        {episodes.map((episode) => (
-          <div key={episode.id} className="border rounded p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-xl font-semibold">
-                Episode {episode.episodeNumber}: {episode.title}
-              </h2>
-              {episode.explicit && (
-                <span className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
-                  Explicit
-                </span>
-              )}
-            </div>
-            
-            <div className="flex gap-4 text-sm text-gray-600 mb-3">
-              <time dateTime={episode.date}>
-                {new Date(episode.date).toLocaleDateString()}
-              </time>
-              <span>{episode.duration}</span>
-              <span>{episode.authors}</span>
-            </div>
 
-            {episode.sections?.mainText && (
-              <p className="mb-4">{episode.sections.mainText}</p>
-            )}
-
-            {episode.sections?.oneMoreThing && (
-              <div className="bg-gray-50 p-4 rounded mb-4">
-                <h3 className="font-semibold mb-2">One More Thing</h3>
-                <div className="space-y-2">
-                  {episode.sections.oneMoreThing.kirk && (
-                    <p>
-                      <span className="font-medium">Kirk:</span>{" "}
-                      {episode.sections.oneMoreThing.kirk}
-                    </p>
-                  )}
-                  {episode.sections.oneMoreThing.maddy && (
-                    <p>
-                      <span className="font-medium">Maddy:</span>{" "}
-                      {episode.sections.oneMoreThing.maddy}
-                    </p>
-                  )}
-                  {episode.sections.oneMoreThing.jason && (
-                    <p>
-                      <span className="font-medium">Jason:</span>{" "}
-                      {episode.sections.oneMoreThing.jason}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {episode.audioUrl && (
-              <audio controls className="w-full">
-                <source src={episode.audioUrl} type="audio/mpeg" />
-              </audio>
-            )}
+      <div class="space-y-12">
+        {/* Latest Episodes */}
+        <section>
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">Latest Episodes</h2>
+            <a
+              href="/episodes"
+              class="text-blue-600 hover:underline"
+            >
+              View all episodes →
+            </a>
           </div>
-        ))}
+
+          <div class="space-y-6">
+            {latestEpisodes.map((episode) => (
+              <EpisodeCard key={episode.id} episode={episode} />
+            ))}
+          </div>
+        </section>
+
+        {/* Most Discussed Games */}
+        <section>
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">Most Discussed Games</h2>
+            <a
+              href="/games"
+              class="text-blue-600 hover:underline"
+            >
+              View all games →
+            </a>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            {mostDiscussedGames.map((game) => (
+              <MostDiscussedGameCard key={game.id} game={game} />
+            ))}
+          </div>
+        </section>
+
+        {/* Recently Discussed Games */}
+        <section>
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">Recently Discussed Games</h2>
+            <a
+              href="/games"
+              class="text-blue-600 hover:underline"
+            >
+              View all games →
+            </a>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {latestGames.map((game) => (
+              <GameCard key={game.id} game={game} />
+            ))}
+          </div>
+        </section>
       </div>
     </Layout>
   );
 }
+
+export default Home;
