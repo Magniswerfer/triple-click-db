@@ -24,6 +24,9 @@ jobs:
           deno-version: v2.x
 
       - name: Build step
+        env:
+          TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
         run: "deno task build"
 
       - name: Upload to Deno Deploy
