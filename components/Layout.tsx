@@ -18,7 +18,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="container mx-auto px-4 text-center">
           <p>Triple Click Index - A fan-made episode guide</p>
           <p className="text-sm mt-2">
-            Not affiliated with Triple Click podcast. Made with ❤️ for the community.
+            By Magnus H. Kaspersen. Not affiliated with Triple Click podcast. Made with ❤️ for the community.
           </p>
         </div>
       </footer>
