@@ -20,6 +20,7 @@ import * as $Counter from "./islands/Counter.tsx";
 import * as $EpisodeFilter from "./islands/EpisodeFilter.tsx";
 import * as $EpisodeManager from "./islands/EpisodeManager.tsx";
 import * as $GameSearchModal from "./islands/GameSearchModal.tsx";
+import * as $SearchBarIsland from "./islands/SearchBarIsland.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
@@ -44,6 +45,7 @@ const manifest = {
     "./islands/EpisodeFilter.tsx": $EpisodeFilter,
     "./islands/EpisodeManager.tsx": $EpisodeManager,
     "./islands/GameSearchModal.tsx": $GameSearchModal,
+    "./islands/SearchBarIsland.tsx": $SearchBarIsland,
   },
   baseUrl: import.meta.url,
 } satisfies Manifest;

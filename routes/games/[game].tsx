@@ -2,7 +2,8 @@ import { Handlers, PageProps } from "$fresh/server.ts";
 import { Head } from "$fresh/runtime.ts";
 import Layout from "../../components/Layout.tsx";
 import { kv } from "../../utils/db.ts";
-import { Episode, Game, GameReference } from "../../types.ts";
+import { Episode, Game } from "../../types.ts";
+import { EpisodeCard } from "../../components/EpisodeCard.tsx";
 
 interface GamePageData {
   game: Game;
@@ -13,7 +14,7 @@ interface GamePageData {
 export const handler: Handlers<GamePageData> = {
   async GET(_req, ctx) {
     const gameId = ctx.params.game;
-    
+
     // Get the game details
     const gameEntry = await kv.get<Game>(["games", gameId]);
     if (!gameEntry.value) {
@@ -31,7 +32,7 @@ export const handler: Handlers<GamePageData> = {
       const episode = entry.value;
       if (episode.games?.some(g => g.id === gameId)) {
         episodes.push(episode);
-        
+
         // Collect related game IDs, excluding the current game
         episode.games
           .filter(g => g.id !== gameId)
@@ -69,7 +70,7 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
       </Head>
 
       <nav class="mb-6">
-        <a href="/games" class="text-blue-600 hover:underline">
+        <a href="/games" class="text-secondary-400 hover:underline">
           ← Back to all games
         </a>
       </nav>
@@ -87,9 +88,9 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
                 />
               )}
               <h1 class="text-2xl font-bold mb-2">{game.title}</h1>
-              
+
               {game.releaseDate && (
-                <div class="mb-2 text-gray-600">
+                <div class="mb-2 text-secondary-800">
                   Released: {new Date(game.releaseDate).toLocaleDateString()}
                 </div>
               )}
@@ -98,13 +99,13 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
                 <div class="mb-4">
                   {game.companies.developer.length > 0 && (
                     <div class="mb-2">
-                      <div class="text-sm font-medium text-gray-500">Developer</div>
+                      <div class="text-sm font-medium text-secondary-400">Developer</div>
                       <div>{game.companies.developer.join(", ")}</div>
                     </div>
                   )}
                   {game.companies.publisher.length > 0 && (
                     <div>
-                      <div class="text-sm font-medium text-gray-500">Publisher</div>
+                      <div class="text-sm font-medium text-secondary-400">Publisher</div>
                       <div>{game.companies.publisher.join(", ")}</div>
                     </div>
                   )}
@@ -113,10 +114,10 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
 
               {game.platforms && game.platforms.length > 0 && (
                 <div class="mb-4">
-                  <div class="text-sm font-medium text-gray-500 mb-1">Platforms</div>
+                  <div class="text-sm font-medium text-secondary-400 mb-1">Platforms</div>
                   <div class="flex flex-wrap gap-1">
                     {game.platforms.map(platform => (
-                      <span key={platform} class="bg-gray-100 text-gray-800 text-sm px-2 py-0.5 rounded">
+                      <span key={platform} class="bg-primary-50 text-secondary-500 text-sm px-2 py-0.5 rounded">
                         {platform}
                       </span>
                     ))}
@@ -126,10 +127,10 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
 
               {game.genres && game.genres.length > 0 && (
                 <div class="mb-4">
-                  <div class="text-sm font-medium text-gray-500 mb-1">Genres</div>
+                  <div class="text-sm font-medium text-secondary-400 mb-1">Genres</div>
                   <div class="flex flex-wrap gap-1">
                     {game.genres.map(genre => (
-                      <span key={genre} class="bg-blue-100 text-blue-800 text-sm px-2 py-0.5 rounded">
+                      <span key={genre} class="bg-primary-50 text-secondary-500 text-sm px-2 py-0.5 rounded">
                         {genre}
                       </span>
                     ))}
@@ -139,7 +140,7 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
 
               {game.summary && (
                 <div>
-                  <div class="text-sm font-medium text-gray-500 mb-1">About</div>
+                  <div class="text-sm font-medium text-secondary-400 mb-1">About</div>
                   <p class="text-sm">{game.summary}</p>
                 </div>
               )}
@@ -155,34 +156,11 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
 
           <div class="space-y-6">
             {episodes.map((episode) => (
-              <div key={episode.id} class="border rounded-lg p-4 shadow-sm">
-                <h3 class="text-xl font-semibold mb-2">
-                  #{episode.episodeNumber} - {episode.title}
-                </h3>
-                <p class="text-gray-600 mb-2">
-                  {new Date(episode.date).toLocaleDateString()}
-                </p>
-                <p class="mb-4">{episode.sections.mainText}</p>
-
-                {episode.games.length > 1 && (
-                  <div>
-                    <h4 class="font-medium mb-2">Other Games Discussed:</h4>
-                    <div class="flex flex-wrap gap-2">
-                      {episode.games
-                        .filter((g) => g.id !== game.id)
-                        .map((g) => (
-                          <a
-                            key={g.id}
-                            href={`/games/${encodeURIComponent(g.id)}`}
-                            class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm hover:bg-blue-200"
-                          >
-                            {g.title}
-                          </a>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <EpisodeCard 
+                key={episode.id} 
+                episode={episode}
+                showFullContent={true}
+              />
             ))}
           </div>
 
@@ -207,7 +185,7 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
                       <div>
                         <h3 class="font-medium">{relatedGame.title}</h3>
                         {relatedGame.releaseDate && (
-                          <div class="text-sm text-gray-500">
+                          <div class="text-sm text-secondary-400">
                             {new Date(relatedGame.releaseDate).getFullYear()}
                           </div>
                         )}

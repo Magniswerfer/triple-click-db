@@ -10,12 +10,12 @@ export function EpisodeCard({ episode, showFullContent = false }: Props) {
     <div class="border rounded-lg p-4 shadow-sm">
       <a 
         href={`/episodes/${episode.id}`}
-        class="block mb-4 hover:text-blue-600 transition-colors"
+        class="block mb-4 hover:text-secondary-500 transition-colors"
       >
         <h2 class="text-xl font-semibold">
           #{episode.episodeNumber} - {episode.title}
         </h2>
-        <p class="text-gray-600 mt-1">
+        <p class="text-secondary-400 mt-1">
           {new Date(episode.date).toLocaleDateString()}
         </p>
       </a>
@@ -34,7 +34,7 @@ export function EpisodeCard({ episode, showFullContent = false }: Props) {
               <a
                 key={game.id}
                 href={`/games/${encodeURIComponent(game.id)}`}
-                class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm hover:bg-blue-200"
+                class="bg-primary-50 text-secondary-800 px-2 py-1 rounded-full text-sm hover:bg-primary-100"
               >
                 {game.title}
               </a>

@@ -19,7 +19,7 @@ export function GameCard({
     <a
       href={`/games/${encodeURIComponent(game.id)}`}
       class={`block p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow ${
-        isDiscussed ? "bg-gradient-to-br from-purple-50 to-white" : ""
+        isDiscussed ? "bg-gradient-to-br from-primary-50 to-white" : ""
       }`}
     >
       <div class="flex gap-4">
@@ -33,12 +33,12 @@ export function GameCard({
         <div>
           <h3 class="font-semibold mb-1">{game.title}</h3>
           {mentionCount !== undefined && (
-            <div class={`text-sm ${isDiscussed ? "text-purple-700 font-medium" : "text-gray-600"}`}>
+            <div class={`text-sm ${isDiscussed ? "text-accent-500 font-medium" : "text-secondary-800"}`}>
               Mentioned in {mentionCount} episode{mentionCount !== 1 ? "s" : ""}
             </div>
           )}
           {game.releaseDate && (
-            <div class="text-sm text-gray-500">
+            <div class="text-sm text-secondary-500">
               {new Date(game.releaseDate).getFullYear()}
             </div>
           )}
@@ -50,7 +50,7 @@ export function GameCard({
           {game.genres.slice(0, 3).map(genre => (
             <span 
               key={genre} 
-              class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded"
+              class="text-xs bg-primary-50 text-secondary-800 px-2 py-0.5 rounded"
             >
               {genre}
             </span>

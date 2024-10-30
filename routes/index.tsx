@@ -103,7 +103,7 @@ function Home({ data }: PageProps<HomePageData>) {
             <h2 class="text-2xl font-bold">Latest Episodes</h2>
             <a
               href="/episodes"
-              class="text-blue-600 hover:underline"
+              class="text-secondary-400 hover:underline"
             >
               View all episodes →
             </a>
@@ -122,7 +122,7 @@ function Home({ data }: PageProps<HomePageData>) {
             <h2 class="text-2xl font-bold">Most Discussed Games</h2>
             <a
               href="/games"
-              class="text-blue-600 hover:underline"
+              class="text-secondary-400 hover:underline"
             >
               View all games →
             </a>
@@ -141,7 +141,7 @@ function Home({ data }: PageProps<HomePageData>) {
             <h2 class="text-2xl font-bold">Recently Discussed Games</h2>
             <a
               href="/games"
-              class="text-blue-600 hover:underline"
+              class="text-secondary-400 hover:underline"
             >
               View all games →
             </a>

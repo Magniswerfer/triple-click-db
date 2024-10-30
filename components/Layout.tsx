@@ -7,14 +7,14 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-primary-500">
       <Navbar />
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-sm p-6">
           {children}
         </div>
       </main>
-      <footer className="bg-gray-800 text-gray-300 py-6">
+      <footer className="bg-secondary-500 text-light-100 py-6">
         <div className="container mx-auto px-4 text-center">
           <p>Triple Click Index - A fan-made episode guide</p>
           <p className="text-sm mt-2">
