@@ -1,15 +1,9 @@
 import "$std/dotenv/load.ts";
 
+// For local development, use the remote URL
+// For Deno Deploy, don't specify a URL at all
 const isDeploy = Deno.env.has("DENO_DEPLOYMENT_ID");
-const url = isDeploy 
-  ? "https://api.deno.com/databases/fa5b123c-7c5f-4dcc-8669-db5d041d2061/connect"  // Your database URL
-  : Deno.env.get("DENO_KV_URL");
-
-if (!url) {
-  throw new Error("DENO_KV_URL environment variable is not set");
-}
-
-export const kv = await Deno.openKv(url);
+export const kv = await Deno.openKv(isDeploy ? undefined : Deno.env.get("DENO_KV_URL"));
 
 // Optional: Close KV on process exit
 globalThis.addEventListener("unload", () => {
