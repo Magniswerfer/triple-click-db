@@ -6,46 +6,57 @@ import { GameCard, MostDiscussedGameCard } from "../components/GameCard.tsx";
 import { kv } from "../utils/db.ts";
 import { Episode, Game, GameReference } from "../types.ts";
 
+// Cache interface
+interface CacheData {
+  data: HomePageData;
+  timestamp: number;
+}
+
 interface HomePageData {
   latestEpisodes: Episode[];
   latestGames: Game[];
   mostDiscussedGames: Array<Game & { mentionCount: number }>;
 }
 
+// Cache duration (5 minutes)
+const CACHE_DURATION = 5 * 60 * 1000;
+
+// In-memory cache
+const pageCache = new Map<string, CacheData>();
+
 export const handler: Handlers<HomePageData> = {
   async GET(_req, ctx) {
-    // Get all episodes
-    const episodeEntries = await kv.list<Episode>({ prefix: ["episodes"] });
-    const episodes: Episode[] = [];
-    for await (const entry of episodeEntries) {
-      episodes.push(entry.value);
+    // Check cache first
+    const cached = pageCache.get('home');
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return ctx.render(cached.data);
     }
-    episodes.sort((a, b) => b.episodeNumber - a.episodeNumber);
-    
-    // Get latest episodes
-    const latestEpisodes = episodes.slice(0, 3);
 
-    // Track game mentions for both latest and most discussed
+    // Get all episodes in one batch
+    const episodeEntries = kv.list<Episode>({ prefix: ["episodes"] });
+    const episodes: Episode[] = [];
     const gameMentions = new Map<string, { 
       game: GameReference; 
       date: string;
       count: number;
     }>();
 
-    // Process all episodes for game mentions
-    for (const episode of episodes) {
-      if (episode.games) {
-        for (const gameRef of episode.games) {
+    // Process episodes as they come in
+    for await (const entry of episodeEntries) {
+      episodes.push(entry.value);
+      
+      if (entry.value.games) {
+        for (const gameRef of entry.value.games) {
           const existing = gameMentions.get(gameRef.id);
           if (existing) {
             existing.count++;
-            if (new Date(episode.date) > new Date(existing.date)) {
-              existing.date = episode.date;
+            if (new Date(entry.value.date) > new Date(existing.date)) {
+              existing.date = entry.value.date;
             }
           } else {
             gameMentions.set(gameRef.id, { 
               game: gameRef, 
-              date: episode.date,
+              date: entry.value.date,
               count: 1
             });
           }
@@ -53,37 +64,52 @@ export const handler: Handlers<HomePageData> = {
       }
     }
 
-    // Get latest games (by mention date)
+    // Sort episodes once
+    episodes.sort((a, b) => b.episodeNumber - a.episodeNumber);
+    const latestEpisodes = episodes.slice(0, 3);
+
+    // Process game mentions
     const sortedByDate = Array.from(gameMentions.values())
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
 
-    // Get most discussed games (by mention count)
     const sortedByCount = Array.from(gameMentions.values())
       .sort((a, b) => b.count - a.count || new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 3);
 
-    // Fetch full game details
-    const latestGames: Game[] = [];
-    for (const mention of sortedByDate) {
-      const gameEntry = await kv.get<Game>(["games", mention.game.id]);
-      if (gameEntry.value) {
-        latestGames.push(gameEntry.value);
-      }
-    }
+    // Fetch all game details concurrently
+    const gamePromises = [...new Set([...sortedByDate, ...sortedByCount])]
+      .map(mention => kv.get<Game>(["games", mention.game.id]));
+    
+    const gameResults = await Promise.all(gamePromises);
+    const gameMap = new Map(
+      gameResults
+        .filter(result => result.value)
+        .map(result => [result.value.id, result.value])
+    );
 
-    const mostDiscussedGames: Array<Game & { mentionCount: number }> = [];
-    for (const mention of sortedByCount) {
-      const gameEntry = await kv.get<Game>(["games", mention.game.id]);
-      if (gameEntry.value) {
-        mostDiscussedGames.push({
-          ...gameEntry.value,
-          mentionCount: mention.count
-        });
-      }
-    }
+    // Construct latest games list
+    const latestGames = sortedByDate
+      .map(mention => gameMap.get(mention.game.id))
+      .filter((game): game is Game => !!game);
 
-    return ctx.render({ latestEpisodes, latestGames, mostDiscussedGames });
+    // Construct most discussed games list
+    const mostDiscussedGames = sortedByCount
+      .map(mention => {
+        const game = gameMap.get(mention.game.id);
+        return game ? { ...game, mentionCount: mention.count } : null;
+      })
+      .filter((game): game is Game & { mentionCount: number } => !!game);
+
+    const data = { latestEpisodes, latestGames, mostDiscussedGames };
+    
+    // Update cache
+    pageCache.set('home', {
+      data,
+      timestamp: Date.now()
+    });
+
+    return ctx.render(data);
   }
 };
 

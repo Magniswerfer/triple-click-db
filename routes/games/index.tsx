@@ -1,4 +1,3 @@
-// routes/games/index.tsx
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Head } from "$fresh/runtime.ts";
 import Layout from "../../components/Layout.tsx";
@@ -11,6 +10,7 @@ import { Pagination } from "../../components/Pagination.tsx";
 import { filterGames } from "../../utils/search.ts";
 
 const ITEMS_PER_PAGE = 27;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 interface GameWithMentions extends Game {
   episodeCount: number;
@@ -26,62 +26,112 @@ interface GamesPageData {
   totalResults: number;
 }
 
+interface CacheEntry {
+  data: {
+    games: GameWithMentions[];
+    totalEpisodes: number;
+  };
+  timestamp: number;
+}
+
+// In-memory cache
+const gamesCache = new Map<string, CacheEntry>();
+
+async function getGamesData(): Promise<{
+  games: GameWithMentions[];
+  totalEpisodes: number;
+}> {
+  // Check cache first
+  const cached = gamesCache.get('all_games');
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+
+  // Initialize batch processing
+  const episodeEntries = kv.list<Episode>({ prefix: ["episodes"] });
+  const gameReferenceMap = new Map<string, { 
+    count: number; 
+    lastMentioned: string;
+    gameRef: GameReference;
+  }>();
+  let totalEpisodes = 0;
+
+  // Process episodes and collect game references
+  for await (const entry of episodeEntries) {
+    totalEpisodes++;
+    const episode = entry.value;
+    
+    if (episode.games?.length) {
+      for (const gameRef of episode.games) {
+        const existing = gameReferenceMap.get(gameRef.id);
+        if (existing) {
+          existing.count++;
+          if (new Date(episode.date) > new Date(existing.lastMentioned)) {
+            existing.lastMentioned = episode.date;
+          }
+        } else {
+          gameReferenceMap.set(gameRef.id, {
+            count: 1,
+            lastMentioned: episode.date,
+            gameRef
+          });
+        }
+      }
+    }
+  }
+
+  // Fetch all games in parallel
+  const gamePromises = Array.from(gameReferenceMap.entries()).map(
+    ([gameId, data]) => 
+      kv.get<Game>(["games", gameId])
+        .then(entry => ({
+          gameId,
+          game: entry.value,
+          mentions: data
+        }))
+  );
+
+  const gameResults = await Promise.all(gamePromises);
+  
+  // Combine game data with mention data
+  const games: GameWithMentions[] = gameResults
+    .filter(result => result.game)
+    .map(({ game, mentions }) => ({
+      ...game!,
+      episodeCount: mentions.count,
+      lastMentioned: mentions.lastMentioned,
+    }))
+    .sort((a, b) => 
+      new Date(b.lastMentioned).getTime() - new Date(a.lastMentioned).getTime()
+    );
+
+  const data = { games, totalEpisodes };
+  
+  // Update cache
+  gamesCache.set('all_games', {
+    data,
+    timestamp: Date.now()
+  });
+
+  return data;
+}
+
 export const handler: Handlers<GamesPageData> = {
   async GET(req, ctx) {
     try {
       const url = new URL(req.url);
-      const page = parseInt(url.searchParams.get("page") || "1");
       const searchQuery = url.searchParams.get("search") || "";
-
-      // Collect episode data and game references
-      const entries = await kv.list<Episode>({ prefix: ["episodes"] });
-      const gameReferenceMap = new Map<string, { count: number; lastMentioned: string }>();
-      let totalEpisodes = 0;
-
-      for await (const entry of entries) {
-        totalEpisodes++;
-        const episode = entry.value;
-        
-        if (episode.games && Array.isArray(episode.games)) {
-          for (const gameRef of episode.games) {
-            const existingRef = gameReferenceMap.get(gameRef.id);
-            if (existingRef) {
-              existingRef.count++;
-              if (new Date(episode.date) > new Date(existingRef.lastMentioned)) {
-                existingRef.lastMentioned = episode.date;
-              }
-            } else {
-              gameReferenceMap.set(gameRef.id, {
-                count: 1,
-                lastMentioned: episode.date,
-              });
-            }
-          }
-        }
-      }
-
-      // Get full game details and combine with mention data
-      let allGames: GameWithMentions[] = [];
-      for (const [gameId, mentions] of gameReferenceMap.entries()) {
-        const gameEntry = await kv.get<Game>(["games", gameId]);
-        if (gameEntry.value) {
-          allGames.push({
-            ...gameEntry.value,
-            episodeCount: mentions.count,
-            lastMentioned: mentions.lastMentioned,
-          });
-        }
-      }
-
-      // Sort by most recently mentioned
-      allGames.sort((a, b) => 
-        new Date(b.lastMentioned).getTime() - new Date(a.lastMentioned).getTime()
-      );
+      
+      // Get games data (from cache if available)
+      const { games: allGames, totalEpisodes } = await getGamesData();
 
       // Apply search filter
       const filteredGames = filterGames(allGames, searchQuery);
       const totalResults = filteredGames.length;
       const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
+      
+      // Calculate pagination
+      const page = parseInt(url.searchParams.get("page") || "1");
       const currentPage = Math.min(Math.max(1, page), totalPages || 1);
       const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
       const games = filteredGames.slice(startIndex, startIndex + ITEMS_PER_PAGE);
