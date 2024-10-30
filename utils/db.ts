@@ -11,4 +11,3 @@ export const kv = await Deno.openKv(url);
 globalThis.addEventListener("unload", () => {
   kv.close();
 });
-deno run -A scripts/migrate-to-remote.ts
