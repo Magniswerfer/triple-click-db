@@ -1,3 +1,10 @@
+export type OneMoreThingCategory = "Game" | "Book" | "TV-Show" | "Movie" | "Podcast" | "Misc";
+
+export interface OneMoreThingEntry {
+  content: string;
+  category: OneMoreThingCategory;
+}
+
 export interface Episode {
   id: string;
   title: string;
@@ -5,9 +12,9 @@ export interface Episode {
   sections: {
     mainText: string;
     oneMoreThing: {
-      kirk: string;
-      maddy: string;
-      jason: string;
+      kirk: OneMoreThingEntry;
+      maddy: OneMoreThingEntry;
+      jason: OneMoreThingEntry;
     };
   };
   date: string;

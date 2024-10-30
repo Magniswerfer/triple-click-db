@@ -1,6 +1,8 @@
 import { useState } from "preact/hooks";
-import { Episode, GameReference } from "../types.ts";
+import { Episode, GameReference, OneMoreThingCategory } from "../types.ts";
 import GameSearchModal from "./GameSearchModal.tsx";
+
+const CATEGORIES: OneMoreThingCategory[] = ["Game", "Book", "TV-Show", "Movie", "Podcast", "Misc"];
 
 interface Props {
   episodes: Episode[];
@@ -17,8 +19,8 @@ export default function EpisodeManager({ episodes }: Props) {
     episode.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     episode.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     episode.sections.mainText.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    Object.values(episode.sections.oneMoreThing).some(text => 
-      text.toLowerCase().includes(searchTerm.toLowerCase())
+    Object.values(episode.sections.oneMoreThing).some(entry => 
+      entry.content.toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
 
@@ -124,7 +126,7 @@ export default function EpisodeManager({ episodes }: Props) {
                 <button
                   onClick={() => setEditedEpisode({ 
                     ...selectedEpisode,
-                    games: selectedEpisode.games || [] // Ensure games array exists
+                    games: selectedEpisode.games || []
                   })}
                   class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                 >
@@ -164,10 +166,20 @@ export default function EpisodeManager({ episodes }: Props) {
                 </div>
                 <div>
                   <h3 class="font-medium">One More Thing</h3>
-                  <div class="space-y-2">
-                    <p><strong>Kirk:</strong> {selectedEpisode.sections.oneMoreThing.kirk}</p>
-                    <p><strong>Maddy:</strong> {selectedEpisode.sections.oneMoreThing.maddy}</p>
-                    <p><strong>Jason:</strong> {selectedEpisode.sections.oneMoreThing.jason}</p>
+                  <div class="space-y-4">
+                    {(["kirk", "maddy", "jason"] as const).map((host) => (
+                      <div key={host}>
+                        <div class="flex items-center gap-2">
+                          <strong class="capitalize">{host}:</strong>
+                          <span class="inline-block px-2 py-1 text-sm bg-gray-100 rounded">
+                            {selectedEpisode.sections.oneMoreThing[host].category}
+                          </span>
+                        </div>
+                        <p class="mt-1">
+                          {selectedEpisode.sections.oneMoreThing[host].content}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
                 <div>
@@ -251,67 +263,57 @@ export default function EpisodeManager({ episodes }: Props) {
                 </div>
                 <div>
                   <label class="block font-medium mb-1">One More Thing</label>
-                  <div class="space-y-2">
-                    <div>
-                      <label class="block text-sm">Kirk</label>
-                      <textarea
-                        value={editedEpisode.sections.oneMoreThing.kirk}
-                        onChange={(e) => 
-                          setEditedEpisode({
-                            ...editedEpisode,
-                            sections: {
-                              ...editedEpisode.sections,
-                              oneMoreThing: {
-                                ...editedEpisode.sections.oneMoreThing,
-                                kirk: (e.target as HTMLTextAreaElement).value
+                  <div class="space-y-4">
+                    {(["kirk", "maddy", "jason"] as const).map((host) => (
+                      <div key={host} class="space-y-2">
+                        <label class="block text-sm capitalize">{host}</label>
+                        <textarea
+                          value={editedEpisode.sections.oneMoreThing[host].content}
+                          onChange={(e) => 
+                            setEditedEpisode({
+                              ...editedEpisode,
+                              sections: {
+                                ...editedEpisode.sections,
+                                oneMoreThing: {
+                                  ...editedEpisode.sections.oneMoreThing,
+                                  [host]: {
+                                    ...editedEpisode.sections.oneMoreThing[host],
+                                    content: (e.target as HTMLTextAreaElement).value
+                                  }
+                                }
                               }
-                            }
-                          })
-                        }
-                        class="w-full p-2 border rounded"
-                        rows={3}
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm">Maddy</label>
-                      <textarea
-                        value={editedEpisode.sections.oneMoreThing.maddy}
-                        onChange={(e) => 
-                          setEditedEpisode({
-                            ...editedEpisode,
-                            sections: {
-                              ...editedEpisode.sections,
-                              oneMoreThing: {
-                                ...editedEpisode.sections.oneMoreThing,
-                                maddy: (e.target as HTMLTextAreaElement).value
+                            })
+                          }
+                          class="w-full p-2 border rounded"
+                          rows={3}
+                        />
+                        <select
+                          value={editedEpisode.sections.oneMoreThing[host].category}
+                          onChange={(e) => 
+                            setEditedEpisode({
+                              ...editedEpisode,
+                              sections: {
+                                ...editedEpisode.sections,
+                                oneMoreThing: {
+                                  ...editedEpisode.sections.oneMoreThing,
+                                  [host]: {
+                                    ...editedEpisode.sections.oneMoreThing[host],
+                                    category: e.target.value as OneMoreThingCategory
+                                  }
+                                }
                               }
-                            }
-                          })
-                        }
-                        class="w-full p-2 border rounded"
-                        rows={3}
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm">Jason</label>
-                      <textarea
-                        value={editedEpisode.sections.oneMoreThing.jason}
-                        onChange={(e) => 
-                          setEditedEpisode({
-                            ...editedEpisode,
-                            sections: {
-                              ...editedEpisode.sections,
-                              oneMoreThing: {
-                                ...editedEpisode.sections.oneMoreThing,
-                                jason: (e.target as HTMLTextAreaElement).value
-                              }
-                            }
-                          })
-                        }
-                        class="w-full p-2 border rounded"
-                        rows={3}
-                      />
-                    </div>
+                            })
+                          }
+                          class="w-full mt-1 p-2 border rounded"
+                        >
+                          {CATEGORIES.map((category) => (
+                            <option key={category} value={category}>
+                              {category}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -324,7 +326,6 @@ export default function EpisodeManager({ episodes }: Props) {
         </div>
       </div>
 
-      {/* Game Search Modal */}
       <GameSearchModal
         isOpen={isGameSearchOpen}
         onClose={() => setIsGameSearchOpen(false)}
