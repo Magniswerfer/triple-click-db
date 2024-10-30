@@ -27,6 +27,8 @@ jobs:
         env:
           TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
           TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
+          DENO_KV_ACCESS_TOKEN: ${{ secrets.DENO_KV_ACCESS_TOKEN }}
+          DENO_KV_URL: ${{ secrets.DENO_KV_URL }}
         run: "deno task build"
 
       - name: Upload to Deno Deploy
