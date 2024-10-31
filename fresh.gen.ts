@@ -4,6 +4,7 @@
 
 import * as $_404 from "./routes/_404.tsx";
 import * as $_app from "./routes/_app.tsx";
+import * as $_middleware from "./routes/_middleware.ts";
 import * as $admin_index from "./routes/admin/index.tsx";
 import * as $api_episodes from "./routes/api/episodes.ts";
 import * as $api_games_index from "./routes/api/games/index.ts";
@@ -15,6 +16,8 @@ import * as $games_game_ from "./routes/games/[game].tsx";
 import * as $games_index from "./routes/games/index.tsx";
 import * as $greet_name_ from "./routes/greet/[name].tsx";
 import * as $index from "./routes/index.tsx";
+import * as $login from "./routes/login.tsx";
+import * as $logout from "./routes/logout.ts";
 import * as $one_more_thing from "./routes/one-more-thing.tsx";
 import * as $Counter from "./islands/Counter.tsx";
 import * as $EpisodeFilter from "./islands/EpisodeFilter.tsx";
@@ -27,6 +30,7 @@ const manifest = {
   routes: {
     "./routes/_404.tsx": $_404,
     "./routes/_app.tsx": $_app,
+    "./routes/_middleware.ts": $_middleware,
     "./routes/admin/index.tsx": $admin_index,
     "./routes/api/episodes.ts": $api_episodes,
     "./routes/api/games/index.ts": $api_games_index,
@@ -38,6 +42,8 @@ const manifest = {
     "./routes/games/index.tsx": $games_index,
     "./routes/greet/[name].tsx": $greet_name_,
     "./routes/index.tsx": $index,
+    "./routes/login.tsx": $login,
+    "./routes/logout.ts": $logout,
     "./routes/one-more-thing.tsx": $one_more_thing,
   },
   islands: {

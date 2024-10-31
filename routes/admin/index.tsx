@@ -28,7 +28,16 @@ export default function AdminPage({ data }: PageProps<{ episodes: Episode[] }>) 
         <title>Admin - Triple Click DB</title>
       </Head>
       
-      <h1 class="text-3xl font-bold mb-6">Episode Management</h1>
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">Episode Management</h1>
+        <a 
+          href="/logout" 
+          class="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600"
+        >
+          Logout
+        </a>
+      </div>
+
       <EpisodeManager episodes={data.episodes} />
     </Layout>
   );
