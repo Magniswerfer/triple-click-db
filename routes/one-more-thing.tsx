@@ -1,11 +1,20 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import EpisodeFilter from "../islands/EpisodeFilter.tsx";
 import Layout from "../components/Layout.tsx";
+import SearchBar from "../components/SearchBar.tsx";
 import { kv } from "../utils/db.ts";
+
+type OneMoreThingCategory =
+  | "Game"
+  | "Book"
+  | "TV-Show"
+  | "Movie"
+  | "Podcast"
+  | "Misc";
 
 interface OneMoreThingEntry {
   content: string;
-  category: "Game" | "Book" | "TV-Show" | "Movie" | "Podcast" | "Misc";
+  category: OneMoreThingCategory;
 }
 
 interface Episode {
@@ -24,8 +33,10 @@ interface Episode {
 
 interface PageData {
   episodes: Episode[];
-  host: string | null;
-  category: string | null;
+  host: string;
+  category: string;
+  searchQuery: string;
+  currentPage: number;
 }
 
 interface CacheEntry {
@@ -99,30 +110,16 @@ async function getRecommendationsData(): Promise<Episode[]> {
   return processedEpisodes;
 }
 
-// Efficient filtering using pre-processed metadata
-function filterEpisodes(
-  episodes: Episode[], 
-  host: string | null, 
-  category: string | null
-): Episode[] {
-  if (!host && !category) return episodes;
+function searchEpisodes(episodes: Episode[], searchQuery: string): Episode[] {
+  if (!searchQuery) return episodes;
   
-  return episodes.filter(episode => {
-    const metadata = (episode as any)._metadata;
-    
-    if (host && host !== 'all') {
-      if (!metadata.hosts.includes(host)) return false;
-      if (category && category !== 'all') {
-        return episode.sections.oneMoreThing[host as keyof typeof episode.sections.oneMoreThing].category === category;
-      }
-      return true;
-    }
-    
-    if (category && category !== 'all') {
-      return metadata.categories.includes(category);
-    }
-    
-    return true;
+  const query = searchQuery.toLowerCase();
+  return episodes.filter((episode) => {
+    if (episode.title.toLowerCase().includes(query)) return true;
+    if (episode.episodeNumber.toString().includes(query)) return true;
+    return Object.values(episode.sections.oneMoreThing).some(
+      (rec) => rec.content && rec.content.toLowerCase().includes(query),
+    );
   });
 }
 
@@ -130,32 +127,37 @@ export const handler: Handlers<PageData> = {
   async GET(req, ctx) {
     try {
       const url = new URL(req.url);
-      const host = url.searchParams.get("host");
-      const category = url.searchParams.get("category");
+      const searchQuery = url.searchParams.get("search") || "";
+      const host = url.searchParams.get("host") || "all";
+      const category = url.searchParams.get("category") || "all";
+      const currentPage = parseInt(url.searchParams.get("page") || "1");
 
-      // Get episodes with recommendations (from cache if available)
+      // Get episodes with recommendations
       const episodes = await getRecommendationsData();
       
-      // Apply filters
-      const filteredEpisodes = filterEpisodes(episodes, host, category);
+      // Apply search only - filtering and pagination will be handled in the island
+      const searchedEpisodes = searchEpisodes(episodes, searchQuery);
 
-      return ctx.render({ 
-        episodes: filteredEpisodes,
+      return ctx.render({
+        episodes: searchedEpisodes,
         host,
-        category
+        category,
+        searchQuery,
+        currentPage,
       });
     } catch (error) {
       console.error("Error in recommendations handler:", error);
-      return ctx.render({ 
+      return ctx.render({
         episodes: [],
-        host: null,
-        category: null
+        host: "all",
+        category: "all",
+        searchQuery: "",
+        currentPage: 1,
       });
     }
   },
 };
 
-// Cache management utilities
 export const recommendationsCacheUtils = {
   invalidateCache() {
     recommendationsCache.clear();
@@ -196,16 +198,24 @@ export const recommendationsCacheUtils = {
   }
 };
 
-
 export default function OneMoreThingPage({ data }: PageProps<PageData>) {
   return (
     <Layout>
-      <div class="container">
+      <div class="max-w-4xl mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-6">One More Thing Recommendations</h1>
-        <EpisodeFilter 
-          episodes={data.episodes} 
-          initialHost={data.host || "all"} 
-          initialCategory={data.category || "all"} 
+        
+        <SearchBar
+          searchQuery={data.searchQuery}
+          placeholder="Search episodes and recommendations..."
+          showClear={true}
+        />
+        
+        <EpisodeFilter
+          episodes={data.episodes}
+          initialHost={data.host}
+          initialCategory={data.category}
+          currentPage={data.currentPage}
+          searchQuery={data.searchQuery}
         />
       </div>
     </Layout>
