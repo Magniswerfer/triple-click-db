@@ -4,7 +4,6 @@ import { getGameById } from "../../../utils/igdb.ts";
 import { Game } from "../../../types.ts";
 
 export const handler: Handlers = {
-  // Store a new game from IGDB
   async POST(req) {
     try {
       const { igdbId } = await req.json();
@@ -24,15 +23,19 @@ export const handler: Handlers = {
         return new Response("Game not found", { status: 404 });
       }
 
+      // Create cover URLs with different sizes if cover exists
+      const coverUrls = igdbGame.cover ? {
+        thumbnail: `https://images.igdb.com/igdb/image/upload/t_cover_big/${igdbGame.cover.image_id}.jpg`,
+        full: `https://images.igdb.com/igdb/image/upload/t_cover_big_2x/${igdbGame.cover.image_id}.jpg`
+      } : undefined;
+
       // Create our game record
       const game: Game = {
         id: crypto.randomUUID(),
         igdbId: igdbGame.id,
         title: igdbGame.name,
         summary: igdbGame.summary,
-        cover: igdbGame.cover ? 
-          `https://images.igdb.com/igdb/image/upload/t_cover_big/${igdbGame.cover.image_id}.jpg` : 
-          undefined,
+        cover: coverUrls,
         releaseDate: igdbGame.first_release_date ? 
           new Date(igdbGame.first_release_date * 1000) : 
           undefined,

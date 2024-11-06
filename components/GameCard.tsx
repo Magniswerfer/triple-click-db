@@ -7,13 +7,25 @@ interface BaseGameCardProps {
   showGenres?: boolean;
 }
 
-export function GameCard({ 
+// Helper function to get the correct image URL
+function getCoverUrl(cover: Game['cover']): string | undefined {
+  if (!cover) return undefined;
+  if (typeof cover === 'string') {
+    return cover;
+  }
+  return cover.thumbnail;
+}
+
+function GameCard({ 
   game, 
   variant = "default",
   mentionCount,
   showGenres = true 
 }: BaseGameCardProps) {
   const isDiscussed = variant === "most-discussed";
+  
+
+  const imageUrl = getCoverUrl(game.cover);
   
   return (
     <a
@@ -25,9 +37,13 @@ export function GameCard({
       <div class="flex gap-4">
         {game.cover && (
           <img
-            src={game.cover}
+            src={imageUrl}
             alt={game.title}
             class="w-16 h-20 object-cover rounded"
+            onError={(e) => {
+              console.error('Image failed to load:', imageUrl);
+              console.error('Error event:', e);
+            }}
           />
         )}
         <div>
@@ -44,7 +60,6 @@ export function GameCard({
           )}
         </div>
       </div>
-
       {showGenres && game.genres && game.genres.length > 0 && (
         <div class="mt-2 flex flex-wrap gap-1">
           {game.genres.slice(0, 3).map(genre => (
@@ -66,7 +81,7 @@ interface MostDiscussedGameCardProps {
   game: Game & { mentionCount: number };
 }
 
-export function MostDiscussedGameCard({ game }: MostDiscussedGameCardProps) {
+function MostDiscussedGameCard({ game }: MostDiscussedGameCardProps) {
   return (
     <GameCard
       game={game}
@@ -76,3 +91,6 @@ export function MostDiscussedGameCard({ game }: MostDiscussedGameCardProps) {
     />
   );
 }
+
+// Export both components
+export { GameCard, MostDiscussedGameCard };

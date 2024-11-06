@@ -10,6 +10,7 @@ import * as $api_episodes from "./routes/api/episodes.ts";
 import * as $api_games_index from "./routes/api/games/index.ts";
 import * as $api_games_search from "./routes/api/games/search.ts";
 import * as $api_joke from "./routes/api/joke.ts";
+import * as $api_search from "./routes/api/search.ts";
 import * as $episodes_episode_ from "./routes/episodes/[episode].tsx";
 import * as $episodes_index from "./routes/episodes/index.tsx";
 import * as $games_game_ from "./routes/games/[game].tsx";
@@ -19,10 +20,14 @@ import * as $index from "./routes/index.tsx";
 import * as $login from "./routes/login.tsx";
 import * as $logout from "./routes/logout.ts";
 import * as $one_more_thing from "./routes/one-more-thing.tsx";
+import * as $search from "./routes/search.tsx";
 import * as $Counter from "./islands/Counter.tsx";
 import * as $EpisodeFilter from "./islands/EpisodeFilter.tsx";
 import * as $EpisodeManager from "./islands/EpisodeManager.tsx";
 import * as $GameSearchModal from "./islands/GameSearchModal.tsx";
+import * as $NewNavbar from "./islands/NewNavbar.tsx";
+import * as $PaginationIsland from "./islands/PaginationIsland.tsx";
+import * as $RecommendationCard from "./islands/RecommendationCard.tsx";
 import * as $SearchBarIsland from "./islands/SearchBarIsland.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
@@ -36,6 +41,7 @@ const manifest = {
     "./routes/api/games/index.ts": $api_games_index,
     "./routes/api/games/search.ts": $api_games_search,
     "./routes/api/joke.ts": $api_joke,
+    "./routes/api/search.ts": $api_search,
     "./routes/episodes/[episode].tsx": $episodes_episode_,
     "./routes/episodes/index.tsx": $episodes_index,
     "./routes/games/[game].tsx": $games_game_,
@@ -45,12 +51,16 @@ const manifest = {
     "./routes/login.tsx": $login,
     "./routes/logout.ts": $logout,
     "./routes/one-more-thing.tsx": $one_more_thing,
+    "./routes/search.tsx": $search,
   },
   islands: {
     "./islands/Counter.tsx": $Counter,
     "./islands/EpisodeFilter.tsx": $EpisodeFilter,
     "./islands/EpisodeManager.tsx": $EpisodeManager,
     "./islands/GameSearchModal.tsx": $GameSearchModal,
+    "./islands/NewNavbar.tsx": $NewNavbar,
+    "./islands/PaginationIsland.tsx": $PaginationIsland,
+    "./islands/RecommendationCard.tsx": $RecommendationCard,
     "./islands/SearchBarIsland.tsx": $SearchBarIsland,
   },
   baseUrl: import.meta.url,

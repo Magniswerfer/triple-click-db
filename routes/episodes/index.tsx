@@ -2,8 +2,6 @@ import { Handlers, PageProps } from "$fresh/server.ts";
 import { Head } from "$fresh/runtime.ts";
 import Layout from "../../components/Layout.tsx";
 import { EpisodeCard } from "../../components/EpisodeCard.tsx";
-import SearchBarIsland from "../../islands/SearchBarIsland.tsx";
-import { SearchStatus } from "../../components/SearchStatus.tsx";
 import { Pagination } from "../../components/Pagination.tsx";
 import { kv } from "../../utils/db.ts";
 import { Episode } from "../../types.ts";
@@ -30,7 +28,7 @@ const episodesCache = new Map<string, CacheEntry>();
 
 async function getAllEpisodes(): Promise<Episode[]> {
   // Check cache first
-  const cached = episodesCache.get('all_episodes');
+  const cached = episodesCache.get("all_episodes");
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached.episodes;
   }
@@ -38,7 +36,7 @@ async function getAllEpisodes(): Promise<Episode[]> {
   // If not cached, fetch and process episodes
   const entries = kv.list<Episode>({ prefix: ["episodes"] });
   const episodes: Episode[] = [];
-  
+
   for await (const entry of entries) {
     if (entry?.value) {
       episodes.push(entry.value);
@@ -53,9 +51,9 @@ async function getAllEpisodes(): Promise<Episode[]> {
   });
 
   // Update cache
-  episodesCache.set('all_episodes', {
+  episodesCache.set("all_episodes", {
     episodes,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 
   return episodes;
@@ -66,7 +64,7 @@ export const handler: Handlers<EpisodesPageData> = {
     try {
       const url = new URL(req.url);
       const searchQuery = url.searchParams.get("search") || "";
-      
+
       // Get episodes (from cache if available)
       const allEpisodes = await getAllEpisodes();
 
@@ -74,12 +72,15 @@ export const handler: Handlers<EpisodesPageData> = {
       const filteredEpisodes = filterEpisodes(allEpisodes, searchQuery);
       const totalResults = filteredEpisodes.length;
       const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
-      
+
       // Calculate pagination
       const page = parseInt(url.searchParams.get("page") || "1");
       const currentPage = Math.min(Math.max(1, page), totalPages || 1);
       const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-      const episodes = filteredEpisodes.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+      const episodes = filteredEpisodes.slice(
+        startIndex,
+        startIndex + ITEMS_PER_PAGE,
+      );
 
       return ctx.render({
         episodes,
@@ -119,11 +120,11 @@ export const episodesCacheUtils = {
 
   // Update cache with new episode
   async updateCacheWithEpisode(episode: Episode) {
-    const cached = episodesCache.get('all_episodes');
+    const cached = episodesCache.get("all_episodes");
     if (cached) {
       const episodes = [...cached.episodes];
-      const existingIndex = episodes.findIndex(ep => ep.id === episode.id);
-      
+      const existingIndex = episodes.findIndex((ep) => ep.id === episode.id);
+
       if (existingIndex >= 0) {
         episodes[existingIndex] = episode;
       } else {
@@ -136,15 +137,17 @@ export const episodesCacheUtils = {
         return numB - numA;
       });
 
-      episodesCache.set('all_episodes', {
+      episodesCache.set("all_episodes", {
         episodes,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
-  }
+  },
 };
 
-export default function EpisodesPage({ data }: PageProps<{
+export default function EpisodesPage({
+  data,
+}: PageProps<{
   episodes: Episode[];
   currentPage: number;
   totalPages: number;
@@ -158,22 +161,11 @@ export default function EpisodesPage({ data }: PageProps<{
       <Head>
         <title>Episodes - Triple Click</title>
       </Head>
-      
+
       <div class="mb-6">
         <div class="flex justify-between items-center mb-4">
           <h1 class="text-3xl font-bold">All Episodes</h1>
         </div>
-
-        <SearchBarIsland 
-          initialQuery={searchQuery}
-          placeholder="Search episodes, games, and discussions..."
-        />
-
-        <SearchStatus 
-          totalResults={totalResults}
-          searchQuery={searchQuery}
-          itemName="episode"
-        />
       </div>
 
       {/* Episodes List */}

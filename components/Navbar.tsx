@@ -1,5 +1,3 @@
-import { h } from "preact";
-
 const Navbar = () => {
   return (
     <nav className="bg-secondary-500 p-4 shadow-lg">

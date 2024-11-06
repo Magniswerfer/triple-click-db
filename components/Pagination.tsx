@@ -1,13 +1,13 @@
-// components/Pagination.tsx
 interface PaginationButtonProps {
   page: number;
   currentPage: number;
   searchQuery: string;
+  paramName: string;
 }
 
-function PaginationButton({ page, currentPage, searchQuery }: PaginationButtonProps) {
+function PaginationButton({ page, currentPage, searchQuery, paramName }: PaginationButtonProps) {
   const isActive = page === currentPage;
-  const href = `?page=${page}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}`;
+  const href = `?q=${encodeURIComponent(searchQuery)}&${paramName}=${page}`;
   
   return (
     <a
@@ -27,24 +27,27 @@ interface PaginationProps {
   currentPage: number;
   totalPages: number;
   searchQuery: string;
+  paramName: string;
 }
 
-export function Pagination({ currentPage, totalPages, searchQuery }: PaginationProps) {
+export function Pagination({ currentPage, totalPages, searchQuery, paramName }: PaginationProps) {
   if (totalPages <= 1) return null;
+
+  // Helper to generate page URLs
+  const getPageUrl = (page: number) => 
+    `?q=${encodeURIComponent(searchQuery)}&${paramName}=${page}`;
 
   return (
     <div class="flex justify-center items-center mt-8">
       {currentPage > 1 && (
         <a
-          href={`?page=${currentPage - 1}${
-            searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""
-          }`}
+          href={getPageUrl(currentPage - 1)}
           class="px-3 py-1 border rounded mx-1 border-light-600 hover:bg-light-100"
         >
           Previous
         </a>
       )}
-
+      
       {Array.from({ length: totalPages }, (_, i) => i + 1)
         .filter(page => 
           page === 1 || 
@@ -60,15 +63,14 @@ export function Pagination({ currentPage, totalPages, searchQuery }: PaginationP
               page={page}
               currentPage={currentPage}
               searchQuery={searchQuery}
+              paramName={paramName}
             />
           </>
         ))}
 
       {currentPage < totalPages && (
         <a
-          href={`?page=${currentPage + 1}${
-            searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""
-          }`}
+          href={getPageUrl(currentPage + 1)}
           class="px-3 py-1 border rounded mx-1 border-light-600 hover:bg-light-100"
         >
           Next

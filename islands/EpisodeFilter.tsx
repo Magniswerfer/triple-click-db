@@ -1,5 +1,6 @@
-import { useEffect, useState } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
 import { Pagination } from "../components/Pagination.tsx";
+import RecommendationCard from "./RecommendationCard.tsx";
 
 type OneMoreThingCategory =
   | "Game"
@@ -199,47 +200,9 @@ export default function EpisodeFilter({
 
       <div class="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
         {paginatedRecommendations.map((rec) => (
-          <div
-            key={`${rec.id}-${rec.host}`}
-            class="break-inside-avoid-column bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow flex flex-col inline-block w-full"
-          >
-            <div class="p-4 flex flex-col">
-              {/* Recommendation content */}
-              <p class="text-lg mb-2">{rec.content}</p>{" "}
-              {/* Changed from mb-4 to mb-2 */}
-              {/* Metadata section */}
-              <div class="mt-2">
-                {" "}
-                {/* Changed from mt-4 to mt-2 */}
-                {/* Category and host */}
-                <div class="flex items-center gap-2 mb-3">
-                  <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded whitespace-nowrap">
-                    {rec.category}
-                  </span>
-                  <span class="text-sm text-gray-600 capitalize whitespace-nowrap">
-                    by {rec.host}
-                  </span>
-                </div>
-                {/* Episode link */}
-                <div class="pt-3 border-t">
-                  <a
-                    href={`/episodes/${rec.id}`}
-                    class="text-sm text-gray-600 hover:text-blue-600"
-                  >
-                    <div class="line-clamp-1">
-                      Episode {rec.episodeNumber}: {rec.episodeTitle}
-                    </div>
-                    <div class="text-xs text-gray-500 mt-1">
-                      {new Date(rec.date).toLocaleDateString()}
-                    </div>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
+          <RecommendationCard key={`${rec.id}-${rec.host}`} {...rec} />
         ))}
       </div>
-
       {filteredRecommendations.length === 0 && (
         <div class="text-center text-gray-500 mt-8">
           No recommendations found for these filters.

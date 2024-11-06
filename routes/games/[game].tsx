@@ -82,7 +82,7 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
             <div class="border rounded-lg p-4 shadow-sm">
               {game.cover && (
                 <img
-                  src={game.cover}
+                  src={game.cover.full}
                   alt={game.title}
                   class="w-full rounded-lg mb-4"
                 />
@@ -177,7 +177,7 @@ export default function GamePage({ data }: PageProps<GamePageData>) {
                     <div class="flex gap-3">
                       {relatedGame.cover && (
                         <img
-                          src={relatedGame.cover}
+                          src={relatedGame.cover.thumbnail}
                           alt={relatedGame.title}
                           class="w-12 h-16 object-cover rounded"
                         />

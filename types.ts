@@ -34,19 +34,22 @@ export interface GameReference {
 }
 
 export interface Game {
-  id: string;           // Our internal ID
-  igdbId: number;      // IGDB ID
-  title: string;       // Game title
-  summary?: string;    // Game description
-  cover?: string;      // Cover image URL
-  releaseDate?: Date;  // Release date
-  companies?: {        // Companies involved
+  id: string;
+  igdbId: number;
+  title: string;
+  summary?: string;
+  cover?: {
+    thumbnail: string; // Smaller image for lists/cards
+    full: string;     // Larger image for game page
+  };
+  releaseDate?: Date;
+  companies?: {
     developer: string[];
     publisher: string[];
   };
-  platforms?: string[]; // Platforms
-  genres?: string[];    // Game genres
-  updatedAt: Date;     // Last time we updated from IGDB
+  platforms?: string[];
+  genres?: string[];
+  updatedAt: Date;
 }
 
 // IGDB API response types (partial, add more as needed)

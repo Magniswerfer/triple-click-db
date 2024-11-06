@@ -1,7 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import EpisodeFilter from "../islands/EpisodeFilter.tsx";
 import Layout from "../components/Layout.tsx";
-import SearchBar from "../components/SearchBar.tsx";
 import { kv } from "../utils/db.ts";
 
 type OneMoreThingCategory =
@@ -57,11 +56,13 @@ function processEpisodeRecommendations(episode: Episode) {
     jason: episode.sections.oneMoreThing.jason,
   };
 
-  const hasRecommendations = Object.values(recommendations).some(rec => rec.content);
+  const hasRecommendations = Object.values(recommendations).some(
+    (rec) => rec.content,
+  );
   if (!hasRecommendations) return null;
 
   const categories = new Set<string>();
-  Object.values(recommendations).forEach(rec => {
+  Object.values(recommendations).forEach((rec) => {
     if (rec.content && rec.category) {
       categories.add(rec.category);
     }
@@ -80,7 +81,7 @@ function processEpisodeRecommendations(episode: Episode) {
 
 async function getRecommendationsData(): Promise<Episode[]> {
   // Check cache first
-  const cached = recommendationsCache.get('all_recommendations');
+  const cached = recommendationsCache.get("all_recommendations");
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached.episodes;
   }
@@ -97,14 +98,14 @@ async function getRecommendationsData(): Promise<Episode[]> {
   }
 
   // Sort by date
-  processedEpisodes.sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+  processedEpisodes.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
   // Update cache
-  recommendationsCache.set('all_recommendations', {
+  recommendationsCache.set("all_recommendations", {
     episodes: processedEpisodes,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 
   return processedEpisodes;
@@ -112,7 +113,7 @@ async function getRecommendationsData(): Promise<Episode[]> {
 
 function searchEpisodes(episodes: Episode[], searchQuery: string): Episode[] {
   if (!searchQuery) return episodes;
-  
+
   const query = searchQuery.toLowerCase();
   return episodes.filter((episode) => {
     if (episode.title.toLowerCase().includes(query)) return true;
@@ -134,7 +135,7 @@ export const handler: Handlers<PageData> = {
 
       // Get episodes with recommendations
       const episodes = await getRecommendationsData();
-      
+
       // Apply search only - filtering and pagination will be handled in the island
       const searchedEpisodes = searchEpisodes(episodes, searchQuery);
 
@@ -172,30 +173,30 @@ export const recommendationsCacheUtils = {
   },
 
   async updateCacheWithEpisode(episode: Episode) {
-    const cached = recommendationsCache.get('all_recommendations');
+    const cached = recommendationsCache.get("all_recommendations");
     if (cached) {
       const episodes = [...cached.episodes];
       const processed = processEpisodeRecommendations(episode);
-      
+
       if (processed) {
-        const existingIndex = episodes.findIndex(ep => ep.id === episode.id);
+        const existingIndex = episodes.findIndex((ep) => ep.id === episode.id);
         if (existingIndex >= 0) {
           episodes[existingIndex] = processed;
         } else {
           episodes.push(processed);
         }
 
-        episodes.sort((a, b) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()
+        episodes.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         );
 
-        recommendationsCache.set('all_recommendations', {
+        recommendationsCache.set("all_recommendations", {
           episodes,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
     }
-  }
+  },
 };
 
 export default function OneMoreThingPage({ data }: PageProps<PageData>) {
@@ -203,13 +204,7 @@ export default function OneMoreThingPage({ data }: PageProps<PageData>) {
     <Layout>
       <div class="max-w-4xl mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-6">One More Thing Recommendations</h1>
-        
-        <SearchBar
-          searchQuery={data.searchQuery}
-          placeholder="Search episodes and recommendations..."
-          showClear={true}
-        />
-        
+
         <EpisodeFilter
           episodes={data.episodes}
           initialHost={data.host}
