@@ -1,7 +1,7 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
-import EpisodeFilter from "../islands/EpisodeFilter.tsx";
-import Layout from "../components/Layout.tsx";
-import { kv } from "../utils/db.ts";
+import EpisodeFilter from "../../islands/EpisodeFilter.tsx";
+import Layout from "../../components/Layout.tsx";
+import { kv } from "../../utils/db.ts";
 
 type OneMoreThingCategory =
   | "Game"

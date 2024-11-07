@@ -1,13 +1,13 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Head } from "$fresh/runtime.ts";
-import { Episode, Game } from "../types.ts";
-import { kv } from "../utils/db.ts";
-import { filterEpisodes, filterGames } from "../utils/search.ts";
-import Layout from "../components/Layout.tsx";
-import { EpisodeCard } from "../components/EpisodeCard.tsx";
-import { GameCard } from "../components/GameCard.tsx";
-import PaginationIsland from "../islands/PaginationIsland.tsx";
-import RecommendationCard from "../islands/RecommendationCard.tsx";
+import { Episode, Game } from "../../types.ts";
+import { kv } from "../../utils/db.ts";
+import { filterEpisodes, filterGames } from "../../utils/search.ts";
+import Layout from "../../components/Layout.tsx";
+import { EpisodeCard } from "../../components/EpisodeCard.tsx";
+import { GameCard } from "../../components/GameCard.tsx";
+import PaginationIsland from "../../islands/PaginationIsland.tsx";
+import RecommendationCard from "../../islands/RecommendationCard.tsx";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -315,7 +315,7 @@ export default function SearchPage({ data }: PageProps<SearchResults>) {
                   id={entry.episode.id}
                   episodeNumber={entry.episode.episodeNumber}
                   episodeTitle={entry.episode.title}
-                  date={entry.episode.date} // Pass date 
+                  date={entry.episode.date} // Pass date
                   host={entry.person.toLowerCase()}
                   content={entry.content}
                   category={entry.category as OneMoreThingCategory}
