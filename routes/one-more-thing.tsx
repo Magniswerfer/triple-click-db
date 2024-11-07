@@ -128,19 +128,16 @@ export const handler: Handlers<PageData> = {
   async GET(req, ctx) {
     try {
       const url = new URL(req.url);
-      const searchQuery = url.searchParams.get("search") || "";
       const host = url.searchParams.get("host") || "all";
       const category = url.searchParams.get("category") || "all";
-      const currentPage = parseInt(url.searchParams.get("page") || "1");
+      const currentPage = parseInt(url.searchParams.get("omtPage") || "1"); // Changed from page to omtPage
+      const searchQuery = url.searchParams.get("q") || ""; // Changed from search to q
 
       // Get episodes with recommendations
       const episodes = await getRecommendationsData();
 
-      // Apply search only - filtering and pagination will be handled in the island
-      const searchedEpisodes = searchEpisodes(episodes, searchQuery);
-
       return ctx.render({
-        episodes: searchedEpisodes,
+        episodes,
         host,
         category,
         searchQuery,
@@ -202,7 +199,7 @@ export const recommendationsCacheUtils = {
 export default function OneMoreThingPage({ data }: PageProps<PageData>) {
   return (
     <Layout>
-      <div class="max-w-4xl mx-auto px-4 py-8">
+      <div class="mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold mb-6">One More Thing Recommendations</h1>
 
         <EpisodeFilter

@@ -4,11 +4,11 @@ import Layout from "../../components/Layout.tsx";
 import { kv } from "../../utils/db.ts";
 import { Episode, Game, GameReference } from "../../types.ts";
 import { GameCard } from "../../components/GameCard.tsx";
-import { Pagination } from "../../components/Pagination.tsx";
+import PaginationIsland from "../../islands/PaginationIsland.tsx";
 import { filterGames } from "../../utils/search.ts";
 
 const ITEMS_PER_PAGE = 27;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000;
 
 interface GameWithMentions extends Game {
   episodeCount: number;
@@ -16,12 +16,13 @@ interface GameWithMentions extends Game {
 }
 
 interface GamesPageData {
-  games: GameWithMentions[];
+  games: {
+    items: GameWithMentions[];
+    currentPage: number;
+    totalPages: number;
+    total: number;
+  };
   totalEpisodes: number;
-  currentPage: number;
-  totalPages: number;
-  searchQuery: string;
-  totalResults: number;
 }
 
 interface CacheEntry {
@@ -122,56 +123,48 @@ export const handler: Handlers<GamesPageData> = {
   async GET(req, ctx) {
     try {
       const url = new URL(req.url);
-      const searchQuery = url.searchParams.get("search") || "";
+      const page = parseInt(url.searchParams.get("gamePage") || "1");
 
       // Get games data (from cache if available)
       const { games: allGames, totalEpisodes } = await getGamesData();
 
-      // Apply search filter
-      const filteredGames = filterGames(allGames, searchQuery);
-      const totalResults = filteredGames.length;
-      const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
+      const total = allGames.length;
+      const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
       // Calculate pagination
-      const page = parseInt(url.searchParams.get("page") || "1");
       const currentPage = Math.min(Math.max(1, page), totalPages || 1);
       const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-      const games = filteredGames.slice(
+      const paginatedGames = allGames.slice(
         startIndex,
-        startIndex + ITEMS_PER_PAGE,
+        startIndex + ITEMS_PER_PAGE
       );
 
       return ctx.render({
-        games,
-        totalEpisodes,
-        currentPage,
-        totalPages,
-        searchQuery,
-        totalResults,
+        games: {
+          items: paginatedGames,
+          currentPage,
+          totalPages,
+          total
+        },
+        totalEpisodes
       });
     } catch (error) {
       console.error("Error in games handler:", error);
       return ctx.render({
-        games: [],
-        totalEpisodes: 0,
-        currentPage: 1,
-        totalPages: 0,
-        searchQuery: "",
-        totalResults: 0,
+        games: {
+          items: [],
+          currentPage: 1,
+          totalPages: 0,
+          total: 0
+        },
+        totalEpisodes: 0
       });
     }
   },
 };
 
 export default function GamesPage({ data }: PageProps<GamesPageData>) {
-  const {
-    games,
-    totalEpisodes,
-    currentPage,
-    totalPages,
-    searchQuery,
-    totalResults,
-  } = data;
+  const { games, totalEpisodes } = data;
 
   return (
     <Layout>
@@ -180,45 +173,42 @@ export default function GamesPage({ data }: PageProps<GamesPageData>) {
       </Head>
 
       <div class="mb-6">
-        <h1 class="text-3xl font-bold mb-4">Games Discussed</h1>
+        <h1 class="text-3xl font-bold mb-4" data-section="gamePage">Games Discussed</h1>
+        {games.total > 0 && (
+          <p class="mb-6">
+            {games.total} games discussed across {totalEpisodes} episodes
+          </p>
+        )}
       </div>
 
-      {games.length === 0 && !searchQuery
-        ? (
-          <div class="text-center py-12">
-            <div class="text-gray-500 mb-4">
-              No games have been discussed yet.
-            </div>
-            <div class="text-sm text-gray-400">
-              {totalEpisodes === 0
-                ? "No episodes have been processed yet."
-                : `${totalEpisodes} episodes have been processed, but no games were found.`}
-            </div>
+      {games.total === 0 ? (
+        <div class="text-center py-12">
+          <div class="text-gray-500 mb-4">
+            No games have been discussed yet.
           </div>
-        )
-        : (
-          <>
-            {!searchQuery && (
-              <p class="mb-6">
-                {totalResults} games discussed across {totalEpisodes} episodes
-              </p>
-            )}
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {games.map((game) => (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  mentionCount={game.episodeCount}
-                />
-              ))}
-            </div>
-          </>
-        )}
+          <div class="text-sm text-gray-400">
+            {totalEpisodes === 0
+              ? "No episodes have been processed yet."
+              : `${totalEpisodes} episodes have been processed, but no games were found.`}
+          </div>
+        </div>
+      ) : (
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {games.items.map((game) => (
+            <GameCard
+              key={game.id}
+              game={game}
+              mentionCount={game.episodeCount}
+            />
+          ))}
+        </div>
+      )}
 
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        searchQuery={searchQuery}
+      <PaginationIsland
+        currentPage={games.currentPage}
+        totalPages={games.totalPages}
+        searchQuery=""
+        paramName="gamePage"
       />
     </Layout>
   );

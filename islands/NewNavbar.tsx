@@ -52,9 +52,9 @@ export default function NavbarIsland() {
         {/* Desktop Navigation */}
         <div class="hidden lg:flex items-center justify-between gap-4">
           <div class="text-light-100 hover:text-light-500 font-bold text-xl whitespace-nowrap">
-            <a href="/">Triple Click <span class="inline text-accent-500">Dex</span></a>
+            <a href="/">Triple Click <span class="inline text-accent-500">Dex</span><sup class="text-xs text-light-100"> beta</sup></a>
           </div>
-          
+
           <div class="flex-1 flex justify-center px-4">
             <SearchBar />
           </div>
@@ -85,7 +85,7 @@ export default function NavbarIsland() {
         <div class="lg:hidden">
           <div class="flex items-center justify-between">
             <div class="text-light-100 hover:text-light-500 font-bold text-xl">
-              <a href="/">Triple Click <span class="inline text-accent-500">Dex</span></a>
+              <a href="/">Triple Click <span class="inline text-accent-500">Dex</span><sup class="text-xs text-light-100"> beta</sup></a>
             </div>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

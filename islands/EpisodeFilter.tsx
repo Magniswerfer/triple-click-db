@@ -1,6 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
-import { Pagination } from "../components/Pagination.tsx";
+import PaginationIsland from "./PaginationIsland.tsx";
 import RecommendationCard from "./RecommendationCard.tsx";
+import { IS_BROWSER } from "$fresh/runtime.ts";
 
 type OneMoreThingCategory =
   | "Game"
@@ -46,17 +47,7 @@ const CATEGORIES: OneMoreThingCategory[] = [
   "Misc",
 ];
 const HOSTS = ["all", "kirk", "maddy", "jason"];
-const ITEMS_PER_PAGE = 10;
-
-interface RecommendationCard {
-  id: string; // episode id
-  episodeNumber: number;
-  episodeTitle: string;
-  date: string;
-  host: string;
-  content: string;
-  category: OneMoreThingCategory;
-}
+const ITEMS_PER_PAGE = 20; // Increased for wider grid
 
 export default function EpisodeFilter({
   episodes,
@@ -67,17 +58,18 @@ export default function EpisodeFilter({
 }: EpisodeFilterProps) {
   const [activeHost, setActiveHost] = useState(initialHost);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [page, setPage] = useState(currentPage);
 
   useEffect(() => {
     setActiveHost(initialHost);
     setActiveCategory(initialCategory);
-  }, [initialHost, initialCategory]);
+    setPage(currentPage);
+  }, [initialHost, initialCategory, currentPage]);
 
   // Transform episodes into recommendation cards
   const allRecommendations: RecommendationCard[] = episodes.flatMap(
     (episode) => {
       const cards: RecommendationCard[] = [];
-
       Object.entries(episode.sections.oneMoreThing).forEach(([host, rec]) => {
         if (rec.content) {
           cards.push({
@@ -91,7 +83,6 @@ export default function EpisodeFilter({
           });
         }
       });
-
       return cards;
     },
   );
@@ -106,39 +97,63 @@ export default function EpisodeFilter({
   });
 
   // Calculate pagination
-  const ITEMS_PER_PAGE = 12; // Increased since we'll have more cards
+  const ITEMS_PER_PAGE = 20;
   const totalPages = Math.max(
     1,
     Math.ceil(filteredRecommendations.length / ITEMS_PER_PAGE),
   );
-  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const validCurrentPage = Math.min(Math.max(1, page), totalPages);
   const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
   const paginatedRecommendations = filteredRecommendations.slice(
     startIndex,
     startIndex + ITEMS_PER_PAGE,
   );
 
-  // Update URL when filters change
-  const updateURL = (newHost: string, newCategory: string) => {
-    const url = new URL(location.href);
-    if (newHost !== "all") {
-      url.searchParams.set("host", newHost);
-    } else {
-      url.searchParams.delete("host");
+  // Update URL helper function
+  const updateURL = (newHost?: string, newCategory?: string, newPage?: number) => {
+    if (!IS_BROWSER) return;
+
+    const url = new URL(window.location.href);
+
+    // Update host if provided
+    if (newHost !== undefined) {
+      if (newHost !== "all") {
+        url.searchParams.set("host", newHost);
+      } else {
+        url.searchParams.delete("host");
+      }
     }
 
-    if (newCategory !== "all") {
-      url.searchParams.set("category", newCategory);
-    } else {
-      url.searchParams.delete("category");
+    // Update category if provided
+    if (newCategory !== undefined) {
+      if (newCategory !== "all") {
+        url.searchParams.set("category", newCategory);
+      } else {
+        url.searchParams.delete("category");
+      }
     }
 
-    url.searchParams.set("page", "1");
+    // Update page if provided
+    if (newPage !== undefined) {
+      if (newPage > 1) {
+        url.searchParams.set("omtPage", newPage.toString());
+      } else {
+        url.searchParams.delete("omtPage");
+      }
+    }
+
+    // Preserve search query if it exists
     if (searchQuery) {
-      url.searchParams.set("search", searchQuery);
+      url.searchParams.set("q", searchQuery);
     }
 
-    location.href = url.toString();
+    window.location.href = url.toString();
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (newHost: string, newCategory: string) => {
+    setPage(1); // Reset to first page when filters change
+    updateURL(newHost, newCategory, 1);
   };
 
   return (
@@ -151,14 +166,11 @@ export default function EpisodeFilter({
             {HOSTS.map((host) => (
               <button
                 key={host}
-                onClick={() => {
-                  updateURL(host, activeCategory);
-                }}
-                class={`py-2 px-4 text-sm font-medium mr-2 transition-colors duration-200 ${
-                  activeHost === host
+                onClick={() => handleFilterChange(host, activeCategory)}
+                class={`py-2 px-4 text-sm font-medium mr-2 transition-colors duration-200 ${activeHost === host
                     ? "border-b-2 border-blue-500 text-blue-600"
                     : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 {host.charAt(0).toUpperCase() + host.slice(1)}
               </button>
@@ -169,28 +181,22 @@ export default function EpisodeFilter({
         {/* Category filter */}
         <div class="flex flex-wrap gap-2">
           <button
-            onClick={() => {
-              updateURL(activeHost, "all");
-            }}
-            class={`px-3 py-1 rounded-full text-sm transition-colors duration-200 ${
-              activeCategory === "all"
+            onClick={() => handleFilterChange(activeHost, "all")}
+            class={`px-3 py-1 rounded-full text-sm transition-colors duration-200 ${activeCategory === "all"
                 ? "bg-blue-500 text-white"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
+              }`}
           >
             All
           </button>
           {CATEGORIES.map((category) => (
             <button
               key={category}
-              onClick={() => {
-                updateURL(activeHost, category);
-              }}
-              class={`px-3 py-1 rounded-full text-sm transition-colors duration-200 ${
-                activeCategory === category
+              onClick={() => handleFilterChange(activeHost, category)}
+              class={`px-3 py-1 rounded-full text-sm transition-colors duration-200 ${activeCategory === category
                   ? "bg-blue-500 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               {category}
             </button>
@@ -198,11 +204,13 @@ export default function EpisodeFilter({
         </div>
       </div>
 
-      <div class="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+      {/* Grid layout */}
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
         {paginatedRecommendations.map((rec) => (
           <RecommendationCard key={`${rec.id}-${rec.host}`} {...rec} />
         ))}
       </div>
+
       {filteredRecommendations.length === 0 && (
         <div class="text-center text-gray-500 mt-8">
           No recommendations found for these filters.
@@ -211,10 +219,11 @@ export default function EpisodeFilter({
 
       {filteredRecommendations.length > 0 && (
         <div class="mt-8">
-          <Pagination
+          <PaginationIsland
             currentPage={validCurrentPage}
             totalPages={totalPages}
             searchQuery={searchQuery}
+            paramName="omtPage"
           />
         </div>
       )}
