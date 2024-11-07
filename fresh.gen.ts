@@ -27,7 +27,6 @@ import * as $login from "./routes/login.tsx";
 import * as $logout from "./routes/logout.ts";
 import * as $one_more_thing from "./routes/one-more-thing.tsx";
 import * as $search from "./routes/search.tsx";
-import * as $Counter from "./islands/Counter.tsx";
 import * as $EpisodeFilter from "./islands/EpisodeFilter.tsx";
 import * as $EpisodeManager from "./islands/EpisodeManager.tsx";
 import * as $GameSearchModal from "./islands/GameSearchModal.tsx";
@@ -66,7 +65,6 @@ const manifest = {
     "./routes/search.tsx": $search,
   },
   islands: {
-    "./islands/Counter.tsx": $Counter,
     "./islands/EpisodeFilter.tsx": $EpisodeFilter,
     "./islands/EpisodeManager.tsx": $EpisodeManager,
     "./islands/GameSearchModal.tsx": $GameSearchModal,
