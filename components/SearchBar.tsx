@@ -7,11 +7,11 @@ interface SearchBarProps {
   showClear?: boolean;
 }
 
-export default function SearchBar({ 
-  searchQuery, 
-  placeholder = "Search...", 
+export default function SearchBar({
+  searchQuery,
+  placeholder = "Search...",
   onSearch,
-  showClear = true 
+  showClear = true
 }: SearchBarProps) {
   const handleSubmit = (e: JSX.TargetedEvent<HTMLFormElement>) => {
     e.preventDefault();

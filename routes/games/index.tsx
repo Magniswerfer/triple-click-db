@@ -97,9 +97,13 @@ async function getGamesData() {
   return data;
 }
 
+
 export const handler: Handlers<GamesPageData> = {
   async GET(req, ctx) {
     try {
+      // Force async state with a minimal delay
+      await new Promise(resolve => setTimeout(resolve, 0));
+
       const url = new URL(req.url);
       const page = parseInt(url.searchParams.get("gamePage") || "1");
       const { games: allGames, totalEpisodes } = await getGamesData();

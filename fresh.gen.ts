@@ -4,6 +4,7 @@
 
 import * as $_404 from "./routes/_404.tsx";
 import * as $_app from "./routes/_app.tsx";
+import * as $_handler from "./routes/_handler.ts";
 import * as $_middleware from "./routes/_middleware.ts";
 import * as $admin_index from "./routes/admin/index.tsx";
 import * as $api_episodes from "./routes/api/episodes.ts";
@@ -12,11 +13,16 @@ import * as $api_games_search from "./routes/api/games/search.ts";
 import * as $api_joke from "./routes/api/joke.ts";
 import * as $api_search from "./routes/api/search.ts";
 import * as $episodes_episode_ from "./routes/episodes/[episode].tsx";
+import * as $episodes_handler from "./routes/episodes/_handler.tsx";
 import * as $episodes_index from "./routes/episodes/index.tsx";
+import * as $episodes_loading from "./routes/episodes/loading.tsx";
 import * as $games_game_ from "./routes/games/[game].tsx";
+import * as $games_handler from "./routes/games/_handler.ts";
 import * as $games_index from "./routes/games/index.tsx";
+import * as $games_loading from "./routes/games/loading.tsx";
 import * as $greet_name_ from "./routes/greet/[name].tsx";
 import * as $index from "./routes/index.tsx";
+import * as $loading from "./routes/loading.tsx";
 import * as $login from "./routes/login.tsx";
 import * as $logout from "./routes/logout.ts";
 import * as $one_more_thing from "./routes/one-more-thing.tsx";
@@ -35,6 +41,7 @@ const manifest = {
   routes: {
     "./routes/_404.tsx": $_404,
     "./routes/_app.tsx": $_app,
+    "./routes/_handler.ts": $_handler,
     "./routes/_middleware.ts": $_middleware,
     "./routes/admin/index.tsx": $admin_index,
     "./routes/api/episodes.ts": $api_episodes,
@@ -43,11 +50,16 @@ const manifest = {
     "./routes/api/joke.ts": $api_joke,
     "./routes/api/search.ts": $api_search,
     "./routes/episodes/[episode].tsx": $episodes_episode_,
+    "./routes/episodes/_handler.tsx": $episodes_handler,
     "./routes/episodes/index.tsx": $episodes_index,
+    "./routes/episodes/loading.tsx": $episodes_loading,
     "./routes/games/[game].tsx": $games_game_,
+    "./routes/games/_handler.ts": $games_handler,
     "./routes/games/index.tsx": $games_index,
+    "./routes/games/loading.tsx": $games_loading,
     "./routes/greet/[name].tsx": $greet_name_,
     "./routes/index.tsx": $index,
+    "./routes/loading.tsx": $loading,
     "./routes/login.tsx": $login,
     "./routes/logout.ts": $logout,
     "./routes/one-more-thing.tsx": $one_more_thing,

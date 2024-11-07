@@ -1,11 +1,10 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Head } from "$fresh/runtime.ts";
 import Layout from "../components/Layout.tsx";
-import { EpisodeCard, EpisodeCardSkeleton } from "../components/EpisodeCard.tsx";
-import { GameCard, MostDiscussedGameCard, GameCardSkeleton } from "../components/GameCard.tsx";
+import { EpisodeCard } from "../components/EpisodeCard.tsx";
+import { GameCard, MostDiscussedGameCard } from "../components/GameCard.tsx";
 import { kv, withCache, batchGetGames } from "../utils/db.ts";
 import { Episode, Game, GameReference } from "../types.ts";
-import { useSignal } from "@preact/signals";
 
 interface HomePageData {
   latestEpisodes: Episode[];
@@ -14,7 +13,6 @@ interface HomePageData {
   tripleClickPicks: Game[];
 }
 
-// Your existing fetch functions remain the same
 async function fetchAllEpisodes(): Promise<Episode[]> {
   const episodes: Episode[] = [];
   const entriesIter = kv.list<Episode>({ prefix: ["episodes"] });
@@ -38,7 +36,6 @@ async function fetchTripleClickPicks(): Promise<Game[]> {
 }
 
 async function fetchGamesByMentions(episodes: Episode[]) {
-  // Your existing implementation remains the same
   const gameMentions = new Map<
     string,
     { game: GameReference; date: string; count: number }
@@ -94,6 +91,9 @@ async function fetchGamesByMentions(episodes: Episode[]) {
 
 export const handler: Handlers<HomePageData> = {
   async GET(_req, ctx) {
+    // Force async state with a minimal delay
+    await new Promise(resolve => setTimeout(resolve, 0));
+
     const data = await withCache("home", async () => {
       const [episodes, tripleClickPicks] = await Promise.all([
         fetchAllEpisodes(),
@@ -114,16 +114,10 @@ export const handler: Handlers<HomePageData> = {
   },
 };
 
+// Rest of the component remains the same...
+
 export default function Home({ data }: PageProps<HomePageData>) {
   const { latestEpisodes, latestGames, mostDiscussedGames, tripleClickPicks } = data;
-  const dataLoaded = useSignal(true);
-
-  // Set dataLoaded to true after initial render
-  if (!dataLoaded.value) {
-    setTimeout(() => {
-      dataLoaded.value = true;
-    }, 0);
-  }
 
   return (
     <Layout>
@@ -141,11 +135,9 @@ export default function Home({ data }: PageProps<HomePageData>) {
         </div>
 
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-12">
-          {!dataLoaded.value ? (
-            Array(5).fill(0).map((_, i) => <GameCardSkeleton key={i} />)
-          ) : (
-            latestGames.map((game) => <GameCard key={game.id} game={game} />)
-          )}
+          {latestGames.map((game) => (
+            <GameCard key={game.id} game={game} />
+          ))}
         </div>
       </section>
 
@@ -159,13 +151,9 @@ export default function Home({ data }: PageProps<HomePageData>) {
         </div>
 
         <div class="space-y-6 mb-12">
-          {!dataLoaded.value ? (
-            Array(3).fill(0).map((_, i) => <EpisodeCardSkeleton key={i} />)
-          ) : (
-            latestEpisodes.map((episode) => (
-              <EpisodeCard key={episode.id} episode={episode} />
-            ))
-          )}
+          {latestEpisodes.map((episode) => (
+            <EpisodeCard key={episode.id} episode={episode} />
+          ))}
         </div>
       </section>
 
@@ -179,36 +167,26 @@ export default function Home({ data }: PageProps<HomePageData>) {
         </div>
 
         <div class="grid gap-4 md:grid-cols-3">
-          {!dataLoaded.value ? (
-            Array(3).fill(0).map((_, i) => (
-              <GameCardSkeleton key={i} variant="most-discussed" />
-            ))
-          ) : (
-            mostDiscussedGames.map((game) => (
-              <MostDiscussedGameCard key={game.id} game={game} />
-            ))
-          )}
+          {mostDiscussedGames.map((game) => (
+            <MostDiscussedGameCard key={game.id} game={game} />
+          ))}
         </div>
       </section>
 
       {/* Triple Click Picks */}
-      {(!dataLoaded.value || tripleClickPicks.length > 0) && (
+      {tripleClickPicks.length > 0 && (
         <section>
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold">Triple Click Picks</h2>
           </div>
 
           <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-            {!dataLoaded.value ? (
-              Array(6).fill(0).map((_, i) => <GameCardSkeleton key={i} />)
-            ) : (
-              tripleClickPicks.map((game) => (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                />
-              ))
-            )}
+            {tripleClickPicks.map((game) => (
+              <GameCard
+                key={game.id}
+                game={game}
+              />
+            ))}
           </div>
         </section>
       )}
