@@ -50,6 +50,7 @@ export interface Game {
   platforms?: string[];
   genres?: string[];
   updatedAt: Date;
+  isPick?: boolean;
 }
 
 // IGDB API response types (partial, add more as needed)

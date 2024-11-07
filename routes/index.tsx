@@ -19,11 +19,23 @@ interface HomePageData {
   tripleClickPicks: Game[];
 }
 
-// Cache duration (5 minutes)
 const CACHE_DURATION = 5 * 60 * 1000;
-
-// In-memory cache
 const pageCache = new Map<string, CacheData>();
+
+// Helper function to fetch Triple Click Picks using isPick flag
+async function fetchTripleClickPicks(): Promise<Game[]> {
+  const picks: Game[] = [];
+  const gamesEntries = kv.list<Game>({ prefix: ["games"] });
+
+  for await (const entry of gamesEntries) {
+    if (entry.value.isPick) {
+      picks.push(entry.value);
+    }
+  }
+
+  // Sort by title alphabetically
+  return picks.sort((a, b) => a.title.localeCompare(b.title));
+}
 
 export const handler: Handlers<HomePageData> = {
   async GET(_req, ctx) {
@@ -32,12 +44,10 @@ export const handler: Handlers<HomePageData> = {
       return ctx.render(cached.data);
     }
 
-    // Fetch data from KV store
     const episodes = await fetchEpisodes();
     const { latestGames, mostDiscussedGames } = await fetchGamesByMentions(episodes);
     const tripleClickPicks = await fetchTripleClickPicks();
 
-    // Prepare data to render
     const data = {
       latestEpisodes: episodes.slice(0, 3),
       latestGames,
@@ -45,14 +55,12 @@ export const handler: Handlers<HomePageData> = {
       tripleClickPicks,
     };
 
-    // Update cache
     pageCache.set("home", { data, timestamp: Date.now() });
-
     return ctx.render(data);
   },
 };
 
-// Helper function to fetch and sort episodes
+// Your existing helper functions...
 async function fetchEpisodes(): Promise<Episode[]> {
   const entries = kv.list<Episode>({ prefix: ["episodes"] });
   const episodes: Episode[] = [];
@@ -62,7 +70,6 @@ async function fetchEpisodes(): Promise<Episode[]> {
   return episodes.sort((a, b) => b.episodeNumber - a.episodeNumber);
 }
 
-// Helper function to fetch games based on mentions in episodes
 async function fetchGamesByMentions(episodes: Episode[]) {
   const gameMentions = new Map<
     string,
@@ -85,7 +92,6 @@ async function fetchGamesByMentions(episodes: Episode[]) {
     }
   }
 
-  // Get sorted lists for "latest" and "most discussed" games
   const sortedByDate = Array.from(gameMentions.values())
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
@@ -94,7 +100,6 @@ async function fetchGamesByMentions(episodes: Episode[]) {
     .sort((a, b) => b.count - a.count || new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 3);
 
-  // Fetch full game data
   const gamePromises = [...new Set([...sortedByDate, ...sortedByCount])].map(
     (mention) => kv.get<Game>(["games", mention.game.id])
   );
@@ -110,19 +115,8 @@ async function fetchGamesByMentions(episodes: Episode[]) {
   };
 }
 
-// Helper function to fetch Triple Click Picks
-async function fetchTripleClickPicks(): Promise<Game[]> {
-  const picksEntries = kv.list<Game>({ prefix: ["triple-click-picks"] });
-  const tripleClickPicks: Game[] = [];
-  for await (const entry of picksEntries) {
-    tripleClickPicks.push(entry.value);
-  }
-  return tripleClickPicks;
-}
-
 function Home({ data }: PageProps<HomePageData>) {
-  const { latestEpisodes, latestGames, mostDiscussedGames, tripleClickPicks } =
-    data;
+  const { latestEpisodes, latestGames, mostDiscussedGames, tripleClickPicks } = data;
 
   return (
     <Layout>
@@ -139,24 +133,12 @@ function Home({ data }: PageProps<HomePageData>) {
           </a>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-12">
           {latestGames.map((game) => <GameCard key={game.id} game={game} />)}
         </div>
       </section>
 
-      {/* Triple Click Picks Section */}
-      <section>
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Triple Click Picks</h2>
-        </div>
 
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          {tripleClickPicks.map((game) => <GameCard
-            key={game.id}
-            game={game}
-          />)}
-        </div>
-      </section>
 
       {/* Latest Episodes */}
       <section>
@@ -167,28 +149,15 @@ function Home({ data }: PageProps<HomePageData>) {
           </a>
         </div>
 
-        <div class="space-y-6">
+        <div class="space-y-6 mb-12">
           {latestEpisodes.map((episode) => (
             <EpisodeCard key={episode.id} episode={episode} />
           ))}
         </div>
       </section>
 
-      <section>
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold">Triple Click Picks</h2>
-        </div>
-
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          {tripleClickPicks.map((game) => <GameCard
-            key={game.id}
-            game={game}
-          />)}
-        </div>
-      </section>
-
       {/* Most Discussed Games */}
-      <section>
+      <section class="mb-12">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-bold">Most Discussed Games</h2>
           <a href="/games" class="text-secondary-400 hover:underline">
@@ -202,6 +171,24 @@ function Home({ data }: PageProps<HomePageData>) {
           ))}
         </div>
       </section>
+
+      {/* Triple Click Picks */}
+            {tripleClickPicks.length > 0 && (
+              <section>
+                <div class="flex justify-between items-center mb-6">
+                  <h2 class="text-2xl font-bold">Triple Click Picks</h2>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
+                  {tripleClickPicks.map((game) => (
+                    <GameCard
+                      key={game.id}
+                      game={game}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
     </Layout>
   );
 }

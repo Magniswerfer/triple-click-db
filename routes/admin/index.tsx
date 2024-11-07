@@ -4,14 +4,16 @@ import Layout from "../../components/Layout.tsx";
 import { kv } from "../../utils/db.ts";
 import EpisodeManager from "../../islands/EpisodeManager.tsx";
 import { Episode, Game } from "../../types.ts";
-import { searchGames } from "../../utils/igdb.ts";
 import { GameCard } from "../../components/GameCard.tsx";
 
-export const handler: Handlers<{
+interface AdminPageData {
   episodes: Episode[];
   searchResults: Game[];
-  tripleClickPicks: Game[];
-}> = {
+  currentPicks: Game[];
+  searchQuery?: string;
+}
+
+export const handler: Handlers<AdminPageData> = {
   async GET(req, ctx) {
     const url = new URL(req.url);
     const searchQuery = url.searchParams.get("q");
@@ -22,52 +24,88 @@ export const handler: Handlers<{
     for await (const entry of entries) {
       episodes.push(entry.value);
     }
-    // Sort by episode number in descending order
     episodes.sort((a, b) => b.episodeNumber - a.episodeNumber);
 
-    // Initialize search results array for game search
+    // Initialize search results and current picks
     let searchResults: Game[] = [];
+    let currentPicks: Game[] = [];
+
+    // If there's a search query, search through games in KV
     if (searchQuery) {
-      try {
-        const response = await searchGames(searchQuery);
-        searchResults = response ? response : [];
-      } catch (error) {
-        console.error("Error searching games:", error);
-        searchResults = [];
+      const gamesEntries = kv.list<Game>({ prefix: ["games"] });
+      for await (const entry of gamesEntries) {
+        const game = entry.value;
+        if (game.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+          searchResults.push(game);
+        }
+        if (game.isPick) {
+          currentPicks.push(game);
+        }
+      }
+    } else {
+      // If no search query, just get current picks
+      const gamesEntries = kv.list<Game>({ prefix: ["games"] });
+      for await (const entry of gamesEntries) {
+        if (entry.value.isPick) {
+          currentPicks.push(entry.value);
+        }
       }
     }
 
-    // Fetch the current Triple Click Picks
-    const tripleClickPicksEntries = kv.list<Game>({ prefix: ["triple-click-picks"] });
-    const tripleClickPicks: Game[] = [];
-    for await (const entry of tripleClickPicksEntries) {
-      tripleClickPicks.push(entry.value);
+    return ctx.render({
+      episodes,
+      searchResults,
+      currentPicks,
+      searchQuery: searchQuery || undefined
+    });
+  },
+
+  async POST(req, ctx) {
+    const form = await req.formData();
+    const gameId = form.get("gameId")?.toString();
+    const action = form.get("action")?.toString();
+
+    if (!gameId || !action) {
+      return new Response("Missing gameId or action", { status: 400 });
     }
 
-    // Render the admin page with episodes, search results, and Triple Click Picks
-    return ctx.render({ episodes, searchResults, tripleClickPicks });
-  },
+    // Get the game from KV
+    const gameEntry = await kv.get<Game>(["games", gameId]);
+    if (!gameEntry.value) {
+      return new Response("Game not found", { status: 404 });
+    }
+
+    // Update the game's isPick status
+    const updatedGame = {
+      ...gameEntry.value,
+      isPick: action === "add",
+      updatedAt: new Date()
+    };
+
+    // Update both KV entries
+    await Promise.all([
+      kv.set(["games", gameId], updatedGame),
+      kv.set(["games_by_igdb", updatedGame.igdbId], updatedGame)
+    ]);
+
+    // Redirect back to admin page, preserving search query if it exists
+    const url = new URL(req.url);
+    const searchQuery = url.searchParams.get("q");
+    const redirectUrl = searchQuery
+      ? `/admin?q=${encodeURIComponent(searchQuery)}`
+      : "/admin";
+
+    return new Response(null, {
+      status: 303,
+      headers: { Location: redirectUrl }
+    });
+  }
 };
 
 export default function AdminPage({
   data,
-}: PageProps<{
-  episodes: Episode[];
-  searchResults: Game[];
-  tripleClickPicks: Game[];
-}>) {
-  const { episodes, searchResults, tripleClickPicks } = data;
-
-  // Handler functions to add and remove games from Triple Click Picks
-  const handleAddToPicks = async (game: Game) => {
-    await kv.set(["triple-click-picks", game.id], game);
-    location.reload(); // Reload the page to fetch the updated list
-  };
-
-  const handleRemoveFromPicks = async (gameId: string) => {
-    await kv.delete(["triple-click-picks", gameId]);
-    location.reload(); // Reload the page to fetch the updated list
-  };
+}: PageProps<AdminPageData>) {
+  const { episodes, searchResults, currentPicks, searchQuery } = data;
 
   return (
     <Layout>
@@ -88,62 +126,89 @@ export default function AdminPage({
 
       <EpisodeManager episodes={episodes} />
 
-      {/* Triple Click Picks Management Section */}
-      <div class="mt-12">
-        <h2 class="text-2xl font-semibold mb-4">Manage Triple Click Picks</h2>
+      {/* Triple Click Picks Management */}
+      <div class="mt-12 space-y-6">
+        <h2 class="text-2xl font-bold">Triple Click Picks</h2>
 
-        {/* Game Search Form */}
-        <form method="get" class="flex mb-6">
+        {/* Search Form */}
+        <form method="get" class="flex gap-2">
           <input
             type="text"
             name="q"
-            placeholder="Search for a game..."
-            class="border px-4 py-2 rounded-l-md w-full"
+            value={searchQuery}
+            placeholder="Search for games..."
+            class="flex-1 px-4 py-2 border rounded-lg"
           />
           <button
             type="submit"
-            class="bg-blue-500 text-white px-4 py-2 rounded-r-md hover:bg-blue-600"
+            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
             Search
           </button>
         </form>
 
-        {/* Display Search Results */}
-        {searchResults && searchResults.length > 0 ? (
-          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-            {searchResults.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                actionButton={{
-                  label: "Add to Picks",
-                  onClick: () => handleAddToPicks(game),
-                }}
-              />
-            ))}
+        {/* Search Results */}
+        {searchResults.length > 0 && (
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Search Results</h3>
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {searchResults.map(game => (
+                <div key={game.id} class="relative">
+                  <GameCard game={game} />
+                  <form
+                    method="POST"
+                    class="absolute top-2 right-2"
+                  >
+                    <input type="hidden" name="gameId" value={game.id} />
+                    <input
+                      type="hidden"
+                      name="action"
+                      value={game.isPick ? "remove" : "add"}
+                    />
+                    <button
+                      type="submit"
+                      class={`px-3 py-1 rounded-md text-sm font-medium ${
+                        game.isPick
+                          ? "bg-red-100 text-red-700 hover:bg-red-200"
+                          : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      }`}
+                    >
+                      {game.isPick ? "Remove Pick" : "Add Pick"}
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
           </div>
-        ) : (
-          searchResults.length === 0 && (
-            <p>No games found for the current search.</p>
-          )
         )}
 
-        {/* Current Triple Click Picks */}
-        <h3 class="text-xl font-semibold mb-2">Current Triple Click Picks</h3>
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {tripleClickPicks.map((game) => (
-            <GameCard
-              key={game.id}
-              game={game}
-              actionButton={{
-                label: "Remove",
-                onClick: () => handleRemoveFromPicks(game.id),
-              }}
-            />
-          ))}
-        </div>
+        {/* Current Picks */}
+        {currentPicks.length > 0 && (
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Current Picks</h3>
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {currentPicks.map(game => (
+                <div key={game.id} class="relative">
+                  <GameCard game={game} />
+                  <form
+                    method="POST"
+                    class="absolute top-2 right-2"
+                  >
+                    <input type="hidden" name="gameId" value={game.id} />
+                    <input type="hidden" name="action" value="remove" />
+                    <button
+                      type="submit"
+                      class="px-3 py-1 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200"
+                    >
+                      Remove Pick
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
 }
-
