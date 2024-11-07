@@ -1,16 +1,11 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Head } from "$fresh/runtime.ts";
 import Layout from "../components/Layout.tsx";
-import { EpisodeCard } from "../components/EpisodeCard.tsx";
-import { GameCard, MostDiscussedGameCard } from "../components/GameCard.tsx";
-import { kv } from "../utils/db.ts";
+import { EpisodeCard, EpisodeCardSkeleton } from "../components/EpisodeCard.tsx";
+import { GameCard, MostDiscussedGameCard, GameCardSkeleton } from "../components/GameCard.tsx";
+import { kv, withCache, batchGetGames } from "../utils/db.ts";
 import { Episode, Game, GameReference } from "../types.ts";
-
-// Cache interface
-interface CacheData {
-  data: HomePageData;
-  timestamp: number;
-}
+import { useSignal } from "@preact/signals";
 
 interface HomePageData {
   latestEpisodes: Episode[];
@@ -19,10 +14,16 @@ interface HomePageData {
   tripleClickPicks: Game[];
 }
 
-const CACHE_DURATION = 5 * 60 * 1000;
-const pageCache = new Map<string, CacheData>();
+// Your existing fetch functions remain the same
+async function fetchAllEpisodes(): Promise<Episode[]> {
+  const episodes: Episode[] = [];
+  const entriesIter = kv.list<Episode>({ prefix: ["episodes"] });
+  for await (const entry of entriesIter) {
+    episodes.push(entry.value);
+  }
+  return episodes.sort((a, b) => b.episodeNumber - a.episodeNumber);
+}
 
-// Helper function to fetch Triple Click Picks using isPick flag
 async function fetchTripleClickPicks(): Promise<Game[]> {
   const picks: Game[] = [];
   const gamesEntries = kv.list<Game>({ prefix: ["games"] });
@@ -33,44 +34,11 @@ async function fetchTripleClickPicks(): Promise<Game[]> {
     }
   }
 
-  // Sort by title alphabetically
   return picks.sort((a, b) => a.title.localeCompare(b.title));
 }
 
-export const handler: Handlers<HomePageData> = {
-  async GET(_req, ctx) {
-    const cached = pageCache.get("home");
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return ctx.render(cached.data);
-    }
-
-    const episodes = await fetchEpisodes();
-    const { latestGames, mostDiscussedGames } = await fetchGamesByMentions(episodes);
-    const tripleClickPicks = await fetchTripleClickPicks();
-
-    const data = {
-      latestEpisodes: episodes.slice(0, 3),
-      latestGames,
-      mostDiscussedGames,
-      tripleClickPicks,
-    };
-
-    pageCache.set("home", { data, timestamp: Date.now() });
-    return ctx.render(data);
-  },
-};
-
-// Your existing helper functions...
-async function fetchEpisodes(): Promise<Episode[]> {
-  const entries = kv.list<Episode>({ prefix: ["episodes"] });
-  const episodes: Episode[] = [];
-  for await (const entry of entries) {
-    episodes.push(entry.value);
-  }
-  return episodes.sort((a, b) => b.episodeNumber - a.episodeNumber);
-}
-
 async function fetchGamesByMentions(episodes: Episode[]) {
+  // Your existing implementation remains the same
   const gameMentions = new Map<
     string,
     { game: GameReference; date: string; count: number }
@@ -86,7 +54,11 @@ async function fetchGamesByMentions(episodes: Episode[]) {
             existing.date = episode.date;
           }
         } else {
-          gameMentions.set(gameRef.id, { game: gameRef, date: episode.date, count: 1 });
+          gameMentions.set(gameRef.id, {
+            game: gameRef,
+            date: episode.date,
+            count: 1
+          });
         }
       }
     }
@@ -100,23 +72,58 @@ async function fetchGamesByMentions(episodes: Episode[]) {
     .sort((a, b) => b.count - a.count || new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 3);
 
-  const gamePromises = [...new Set([...sortedByDate, ...sortedByCount])].map(
-    (mention) => kv.get<Game>(["games", mention.game.id])
-  );
-  const gameResults = await Promise.all(gamePromises);
-  const gameMap = new Map(gameResults.filter((result) => result.value).map((result) => [result.value!.id, result.value!]));
+  const gameIds = [...new Set([
+    ...sortedByDate.map(m => m.game.id),
+    ...sortedByCount.map(m => m.game.id)
+  ])];
+
+  const gameMap = await batchGetGames(gameIds);
 
   return {
-    latestGames: sortedByDate.map((mention) => gameMap.get(mention.game.id)).filter((game): game is Game => !!game),
-    mostDiscussedGames: sortedByCount.map((mention) => {
-      const game = gameMap.get(mention.game.id);
-      return game ? { ...game, mentionCount: mention.count } : null;
-    }).filter((game): game is Game & { mentionCount: number } => !!game),
+    latestGames: sortedByDate
+      .map((mention) => gameMap.get(mention.game.id))
+      .filter((game): game is Game => !!game),
+    mostDiscussedGames: sortedByCount
+      .map((mention) => {
+        const game = gameMap.get(mention.game.id);
+        return game ? { ...game, mentionCount: mention.count } : null;
+      })
+      .filter((game): game is Game & { mentionCount: number } => !!game),
   };
 }
 
-function Home({ data }: PageProps<HomePageData>) {
+export const handler: Handlers<HomePageData> = {
+  async GET(_req, ctx) {
+    const data = await withCache("home", async () => {
+      const [episodes, tripleClickPicks] = await Promise.all([
+        fetchAllEpisodes(),
+        fetchTripleClickPicks()
+      ]);
+
+      const { latestGames, mostDiscussedGames } = await fetchGamesByMentions(episodes);
+
+      return {
+        latestEpisodes: episodes.slice(0, 3),
+        latestGames,
+        mostDiscussedGames,
+        tripleClickPicks,
+      };
+    });
+
+    return ctx.render(data);
+  },
+};
+
+export default function Home({ data }: PageProps<HomePageData>) {
   const { latestEpisodes, latestGames, mostDiscussedGames, tripleClickPicks } = data;
+  const dataLoaded = useSignal(true);
+
+  // Set dataLoaded to true after initial render
+  if (!dataLoaded.value) {
+    setTimeout(() => {
+      dataLoaded.value = true;
+    }, 0);
+  }
 
   return (
     <Layout>
@@ -134,11 +141,13 @@ function Home({ data }: PageProps<HomePageData>) {
         </div>
 
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-12">
-          {latestGames.map((game) => <GameCard key={game.id} game={game} />)}
+          {!dataLoaded.value ? (
+            Array(5).fill(0).map((_, i) => <GameCardSkeleton key={i} />)
+          ) : (
+            latestGames.map((game) => <GameCard key={game.id} game={game} />)
+          )}
         </div>
       </section>
-
-
 
       {/* Latest Episodes */}
       <section>
@@ -150,9 +159,13 @@ function Home({ data }: PageProps<HomePageData>) {
         </div>
 
         <div class="space-y-6 mb-12">
-          {latestEpisodes.map((episode) => (
-            <EpisodeCard key={episode.id} episode={episode} />
-          ))}
+          {!dataLoaded.value ? (
+            Array(3).fill(0).map((_, i) => <EpisodeCardSkeleton key={i} />)
+          ) : (
+            latestEpisodes.map((episode) => (
+              <EpisodeCard key={episode.id} episode={episode} />
+            ))
+          )}
         </div>
       </section>
 
@@ -166,31 +179,39 @@ function Home({ data }: PageProps<HomePageData>) {
         </div>
 
         <div class="grid gap-4 md:grid-cols-3">
-          {mostDiscussedGames.map((game) => (
-            <MostDiscussedGameCard key={game.id} game={game} />
-          ))}
+          {!dataLoaded.value ? (
+            Array(3).fill(0).map((_, i) => (
+              <GameCardSkeleton key={i} variant="most-discussed" />
+            ))
+          ) : (
+            mostDiscussedGames.map((game) => (
+              <MostDiscussedGameCard key={game.id} game={game} />
+            ))
+          )}
         </div>
       </section>
 
       {/* Triple Click Picks */}
-            {tripleClickPicks.length > 0 && (
-              <section>
-                <div class="flex justify-between items-center mb-6">
-                  <h2 class="text-2xl font-bold">Triple Click Picks</h2>
-                </div>
+      {(!dataLoaded.value || tripleClickPicks.length > 0) && (
+        <section>
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">Triple Click Picks</h2>
+          </div>
 
-                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-                  {tripleClickPicks.map((game) => (
-                    <GameCard
-                      key={game.id}
-                      game={game}
-                    />
-                  ))}
-                </div>
-              </section>
+          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
+            {!dataLoaded.value ? (
+              Array(6).fill(0).map((_, i) => <GameCardSkeleton key={i} />)
+            ) : (
+              tripleClickPicks.map((game) => (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                />
+              ))
             )}
+          </div>
+        </section>
+      )}
     </Layout>
   );
 }
-
-export default Home;
