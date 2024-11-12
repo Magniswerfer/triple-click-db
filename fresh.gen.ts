@@ -28,6 +28,7 @@ import * as $search_index from "./routes/search/index.tsx";
 import * as $EpisodeFilter from "./islands/EpisodeFilter.tsx";
 import * as $EpisodeManager from "./islands/EpisodeManager.tsx";
 import * as $GameSearchModal from "./islands/GameSearchModal.tsx";
+import * as $HeroSection from "./islands/HeroSection.tsx";
 import * as $NewNavbar from "./islands/NewNavbar.tsx";
 import * as $PaginationIsland from "./islands/PaginationIsland.tsx";
 import * as $RecommendationCard from "./islands/RecommendationCard.tsx";
@@ -64,6 +65,7 @@ const manifest = {
     "./islands/EpisodeFilter.tsx": $EpisodeFilter,
     "./islands/EpisodeManager.tsx": $EpisodeManager,
     "./islands/GameSearchModal.tsx": $GameSearchModal,
+    "./islands/HeroSection.tsx": $HeroSection,
     "./islands/NewNavbar.tsx": $NewNavbar,
     "./islands/PaginationIsland.tsx": $PaginationIsland,
     "./islands/RecommendationCard.tsx": $RecommendationCard,

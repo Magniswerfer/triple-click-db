@@ -12,15 +12,10 @@
   },
   "lint": {
     "rules": {
-      "tags": [
-        "fresh",
-        "recommended"
-      ]
+      "tags": ["fresh", "recommended"]
     }
   },
-  "exclude": [
-    "**/_fresh/*"
-  ],
+  "exclude": ["**/_fresh/*"],
   "imports": {
     "$fresh/": "https://deno.land/x/fresh@1.7.3/",
     "$std/": "https://deno.land/std@0.216.0/",
@@ -32,13 +27,12 @@
     "preact/": "https://esm.sh/preact@10.22.0/",
     "tailwindcss": "npm:tailwindcss@3.4.1",
     "tailwindcss/": "npm:/tailwindcss@3.4.1/",
-    "tailwindcss/plugin": "npm:/tailwindcss@3.4.1/plugin.js"
+    "tailwindcss/plugin": "npm:/tailwindcss@3.4.1/plugin.js",
+    "lucide-preact": "https://esm.sh/lucide-preact@0.363.0"
   },
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "preact"
   },
-  "unstable": [
-    "kv"
-  ]
+  "unstable": ["kv"]
 }

@@ -5,6 +5,7 @@ import { EpisodeCard } from "../components/EpisodeCard.tsx";
 import { GameCard, MostDiscussedGameCard } from "../components/GameCard.tsx";
 import { kv, withCache, batchGetGames } from "../utils/db.ts";
 import { Episode, Game, GameReference } from "../types.ts";
+import HeroSection from "../islands/HeroSection.tsx"
 
 interface HomePageData {
   latestEpisodes: Episode[];
@@ -122,9 +123,9 @@ export default function Home({ data }: PageProps<HomePageData>) {
   return (
     <Layout>
       <Head>
-        <title>Triple Click DB</title>
+        <title>Triple Click Dex</title>
       </Head>
-
+      <HeroSection />
       {/* Recently Discussed Games */}
       <section>
         <div class="flex justify-between items-center mb-6">
